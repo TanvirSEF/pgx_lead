@@ -10,6 +10,6 @@ export const config = {
   bridgeBaseUrl: (process.env.BRIDGE_BASE_URL || 'https://pgxleads.shop').replace(/\/+$/, ''),
   stripeSecretKey: process.env.STRIPE_SECRET_KEY || '',
   stripeWebhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
-  gatewayBridgeSecret: process.env.GATEWAY_BRIDGE_SECRET || 'pgx_bridge_leads_sec_prod_99',
+  gatewayBridgeSecret: process.env.GATEWAY_BRIDGE_SECRET || 'pgx-leads-super-secret-gateway-bridge-key-2026',
   pgxGatewayUrl: (process.env.PGX_GATEWAY_URL || 'http://localhost:5000').replace(/\/+$/, ''),
 }
