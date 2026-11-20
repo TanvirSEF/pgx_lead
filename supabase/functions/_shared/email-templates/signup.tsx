@@ -34,7 +34,7 @@ export const SignupEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Heading style={brand}>MayaX</Heading>
+          <Heading style={brand}>PGX Leads</Heading>
         </Section>
         <Section style={content}>
           <Heading style={h1}>Confirm your email 🚀</Heading>
@@ -54,7 +54,7 @@ export const SignupEmail = ({
           <Text style={footer}>
             If you didn't create an account, you can safely ignore this email.
           </Text>
-          <Text style={footerSmall}>— The MayaX Team</Text>
+          <Text style={footerSmall}>— The PGX Leads Team</Text>
         </Section>
       </Container>
     </Body>

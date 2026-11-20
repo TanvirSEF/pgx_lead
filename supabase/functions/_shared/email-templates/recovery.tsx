@@ -29,7 +29,7 @@ export const RecoveryEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Heading style={brand}>MayaX</Heading>
+          <Heading style={brand}>PGX Leads</Heading>
         </Section>
         <Section style={content}>
           <Heading style={h1}>Reset your password 🔐</Heading>
@@ -42,7 +42,7 @@ export const RecoveryEmail = ({
           <Text style={footer}>
             If you didn't request this, you can safely ignore this email — your password won't change.
           </Text>
-          <Text style={footerSmall}>— The MayaX Team</Text>
+          <Text style={footerSmall}>— The PGX Leads Team</Text>
         </Section>
       </Container>
     </Body>

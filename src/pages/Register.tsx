@@ -113,7 +113,7 @@ const Register = () => {
           <div className="mb-6">
             <img
               src={logo}
-              alt="MayaX Lead Hub"
+              alt="PGX Leads"
               className="w-56 h-56 lg:w-72 lg:h-72 object-contain mx-auto drop-shadow-[0_0_40px_rgba(139,92,246,0.3)]"
             />
           </div>

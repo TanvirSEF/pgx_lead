@@ -13,7 +13,7 @@ import { toast } from "sonner";
 // Dealer integration payload templates
 // ----------------------------------------------------------------------------
 // Each template documents how a common dealer/CRM/lead-source integration
-// should map its fields onto the MayaX inbound webhook contract.
+// should map its fields onto the PGX Leads inbound webhook contract.
 // All examples are accepted by /functions/v1/inbound-webhook as-is.
 // ----------------------------------------------------------------------------
 
@@ -124,7 +124,7 @@ const TEMPLATES: DealerTemplate[] = [
     name: "DealerSocket-style export",
     category: "crm",
     vendor: "DealerSocket",
-    description: "Map DealerSocket lead fields (CustomerFirstName, etc.) to MayaX names.",
+    description: "Map DealerSocket lead fields (CustomerFirstName, etc.) to PGX Leads names.",
     notes: [
       "DealerSocket exports CustomerFirstName/CustomerLastName — rename them.",
       "Combine VehicleYear + VehicleMake + VehicleModel into vehicle_preference.",
@@ -151,7 +151,7 @@ const TEMPLATES: DealerTemplate[] = [
     name: "VinSolutions CRM",
     category: "crm",
     vendor: "VinSolutions",
-    description: "ADF-style lead converted to MayaX JSON contract.",
+    description: "ADF-style lead converted to PGX Leads JSON contract.",
     notes: [
       "VinSolutions sends ADF/XML — convert to JSON before posting.",
       "Map <contact><name part='first'> → first_name etc.",

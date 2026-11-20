@@ -11,7 +11,7 @@ const Suspended = () => (
       <p className="text-muted-foreground mb-6">
         Your account has been suspended. Please contact support for assistance.
       </p>
-      <Button variant="outline" className="border-border text-foreground hover:bg-muted" onClick={() => window.open("mailto:support@mayaxleadhub.com")}>
+      <Button variant="outline" className="border-border text-foreground hover:bg-muted" onClick={() => window.open("mailto:support@pgxleads.shop")}>
         Contact Support
       </Button>
     </div>

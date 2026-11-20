@@ -82,7 +82,7 @@ export default function OAuthConsent() {
               <h1 className="text-lg font-semibold text-foreground">Connect {clientName}</h1>
             </div>
             <p className="text-sm text-muted-foreground">
-              {clientName} is requesting access to MayaX Lead Hub on your behalf. It will be able to read your
+              {clientName} is requesting access to PGX Leads on your behalf. It will be able to read your
               account, wallet activity, available leads and your purchased leads as you.
             </p>
             <div className="flex gap-3">

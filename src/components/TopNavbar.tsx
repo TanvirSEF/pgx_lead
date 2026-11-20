@@ -46,7 +46,7 @@ const TopNavbar = ({
     useNotifications(dealerId);
   const { data: platformSettings } = usePlatformSettings();
 
-  const siteName = platformSettings?.theme_website_name || "MayaX";
+  const siteName = platformSettings?.theme_website_name || "PGX Leads";
   const siteTagline = platformSettings?.theme_tagline || "Lead Hub";
   const logoUrl = platformSettings?.theme_logo_url;
 

@@ -72,7 +72,7 @@ export default function Unsubscribe() {
         {state.kind === "valid" && (
           <>
             <p className="text-sm text-muted-foreground">
-              Click below to unsubscribe from MayaX emails. You will stop receiving lead
+              Click below to unsubscribe from PGX Leads emails. You will stop receiving lead
               notifications and updates.
             </p>
             <Button onClick={confirm} className="gradient-blue-cyan text-foreground w-full">

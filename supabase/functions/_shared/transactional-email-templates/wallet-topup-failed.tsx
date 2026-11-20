@@ -46,7 +46,7 @@ const WalletTopupFailedEmail = ({
       <Body style={main}>
         <Container style={container}>
           <Section style={header}>
-            <Heading style={brand}>MayaX</Heading>
+            <Heading style={brand}>PGX Leads</Heading>
           </Section>
 
           <Section style={content}>
@@ -87,7 +87,7 @@ const WalletTopupFailedEmail = ({
               You can try the top-up again from your Wallet page. If the issue persists,
               please contact support.
             </Text>
-            <Text style={footerSmall}>— The MayaX Team</Text>
+            <Text style={footerSmall}>— The PGX Leads Team</Text>
           </Section>
         </Container>
       </Body>

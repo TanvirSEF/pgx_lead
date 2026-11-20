@@ -447,7 +447,7 @@ const AdminPaymentManager = () => {
                 <div className="space-y-3">
                   {[
                     { key: "bank_name", label: "Bank Name", placeholder: "e.g. Chase Bank" },
-                    { key: "account_name", label: "Account Name", placeholder: "e.g. MayaX Inc." },
+                    { key: "account_name", label: "Account Name", placeholder: "e.g. PGX Leads Inc." },
                     { key: "account_number", label: "Account Number", placeholder: "e.g. 1234567890" },
                     { key: "routing_number", label: "Routing Number", placeholder: "e.g. 021000021" },
                   ].map(({ key, label, placeholder }) => (

@@ -7,7 +7,7 @@ const DynamicHead = () => {
   useEffect(() => {
     if (!settings) return;
 
-    const name = settings.theme_website_name || "MayaX";
+    const name = settings.theme_website_name || "PGX Leads";
     const tagline = settings.theme_tagline || "";
     const description = settings.theme_meta_description || "";
     const favicon = settings.theme_favicon_url;

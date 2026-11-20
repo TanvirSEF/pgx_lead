@@ -651,7 +651,7 @@ const AdminUserManager = () => {
                 value={editForm.webhook_secret}
                 onChange={(e) => setEditForm(f => ({ ...f, webhook_secret: e.target.value }))}
                 className="bg-background border-border font-mono text-xs"
-                placeholder="Used to sign payloads (X-MayaX-Signature)"
+                placeholder="Used to sign payloads (X-PGX-Signature)"
               />
             </div>
           </div>

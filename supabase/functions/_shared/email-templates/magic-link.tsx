@@ -29,7 +29,7 @@ export const MagicLinkEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Heading style={brand}>MayaX</Heading>
+          <Heading style={brand}>PGX Leads</Heading>
         </Section>
         <Section style={content}>
           <Heading style={h1}>Your login link ✨</Heading>
@@ -42,7 +42,7 @@ export const MagicLinkEmail = ({
           <Text style={footer}>
             If you didn't request this link, you can safely ignore this email.
           </Text>
-          <Text style={footerSmall}>— The MayaX Team</Text>
+          <Text style={footerSmall}>— The PGX Leads Team</Text>
         </Section>
       </Container>
     </Body>

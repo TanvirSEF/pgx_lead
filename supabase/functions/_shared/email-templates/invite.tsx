@@ -32,7 +32,7 @@ export const InviteEmail = ({
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Heading style={brand}>MayaX</Heading>
+          <Heading style={brand}>PGX Leads</Heading>
         </Section>
         <Section style={content}>
           <Heading style={h1}>You've been invited 🎉</Heading>
@@ -49,7 +49,7 @@ export const InviteEmail = ({
           <Text style={footer}>
             If you weren't expecting this invitation, you can safely ignore this email.
           </Text>
-          <Text style={footerSmall}>— The MayaX Team</Text>
+          <Text style={footerSmall}>— The PGX Leads Team</Text>
         </Section>
       </Container>
     </Body>

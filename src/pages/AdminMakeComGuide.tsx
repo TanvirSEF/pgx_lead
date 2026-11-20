@@ -51,7 +51,7 @@ export default function AdminMakeComGuide() {
             Make.com integration guide
           </h1>
           <p className="text-sm text-muted-foreground mt-1 max-w-2xl">
-            Step-by-step setup for sending leads from Make.com into MayaX without losing
+            Step-by-step setup for sending leads from Make.com into PGX Leads without losing
             data. Most "half data comes in, half doesn't" issues come from mapping the
             wrong source variable to the wrong JSON key — this guide fixes that.
           </p>
@@ -144,7 +144,7 @@ last_name   Exists  AND  Not Empty
         <CardHeader>
           <CardTitle className="text-base">Field mapping reference</CardTitle>
           <CardDescription>
-            Each MayaX JSON key, what it expects, and the most common Make.com mistake.
+            Each PGX Leads JSON key, what it expects, and the most common Make.com mistake.
           </CardDescription>
         </CardHeader>
         <CardContent className="overflow-x-auto">
@@ -183,7 +183,7 @@ last_name   Exists  AND  Not Empty
         </CardHeader>
         <CardContent className="space-y-3 text-sm text-foreground/90">
           <p>
-            In Make.com, run your scenario once with a real lead. Then come to MayaX
+            In Make.com, run your scenario once with a real lead. Then come to PGX Leads
             admin and check both:
           </p>
           <ul className="list-disc pl-5 text-[13px] space-y-1">

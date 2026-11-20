@@ -603,14 +603,14 @@ const AdminDashboard = () => {
 
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {[
-                { key: "theme_website_name", label: "Website Name", placeholder: "MayaX" },
+                { key: "theme_website_name", label: "Website Name", placeholder: "PGX Leads" },
                 { key: "theme_logo_url", label: "Logo URL", placeholder: "https://..." },
                 { key: "lead_base_price", label: "Base Lead Price ($)", placeholder: "25.00" },
                 { key: "tier_vip_delay_hours", label: "VIP Delay (hours)", placeholder: "0" },
                 { key: "tier_elite_delay_hours", label: "Elite Delay (hours)", placeholder: "6" },
                 { key: "tier_pro_delay_hours", label: "Pro Delay (hours)", placeholder: "12" },
                 { key: "tier_basic_delay_hours", label: "Basic Delay (hours)", placeholder: "24" },
-                { key: "support_email", label: "Support Email", placeholder: "support@mayax.com" },
+                { key: "support_email", label: "Support Email", placeholder: "support@pgxleads.shop" },
               ].map(({ key, label, placeholder }) => (
                 <div key={key} className="space-y-2">
                   <Label className="text-xs text-muted-foreground">{label}</Label>

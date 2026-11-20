@@ -359,7 +359,7 @@ const AdminBrandingSettings = ({
                   theme_website_name: e.target.value,
                 }))
               }
-              placeholder="MayaX"
+              placeholder="PGX Leads"
               className="bg-card border-border"
               maxLength={60}
             />
@@ -433,12 +433,12 @@ const AdminBrandingSettings = ({
           )}
           <div className="p-3 space-y-1">
             <p className="text-sm font-semibold text-foreground truncate">
-              {settingsForm.theme_website_name || "MayaX"}
+              {settingsForm.theme_website_name || "PGX Leads"}
             </p>
             <p className="text-xs text-muted-foreground line-clamp-2">
               {settingsForm.theme_meta_description || "Your platform description"}
             </p>
-            <p className="text-[10px] text-muted-foreground/60">mayax.ca</p>
+            <p className="text-[10px] text-muted-foreground/60">pgxleads.shop</p>
           </div>
         </div>
       </div>
@@ -457,8 +457,8 @@ const AdminBrandingSettings = ({
             )}
             <span className="text-sm text-muted-foreground font-mono truncate">
               {settingsForm.theme_tagline
-                ? `${settingsForm.theme_website_name || "MayaX"} — ${settingsForm.theme_tagline}`
-                : settingsForm.theme_website_name || "MayaX"}
+                ? `${settingsForm.theme_website_name || "PGX Leads"} — ${settingsForm.theme_tagline}`
+                : settingsForm.theme_website_name || "PGX Leads"}
             </span>
           </div>
           <div className="flex items-center gap-3 mt-2">
@@ -470,7 +470,7 @@ const AdminBrandingSettings = ({
               />
             )}
             <span className="text-lg font-bold text-foreground">
-              {settingsForm.theme_website_name || "MayaX"}
+              {settingsForm.theme_website_name || "PGX Leads"}
             </span>
           </div>
         </div>

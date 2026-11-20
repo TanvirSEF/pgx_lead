@@ -20,11 +20,11 @@ interface ReauthenticationEmailProps {
 export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => (
   <Html lang="en" dir="ltr">
     <Head />
-    <Preview>Your MayaX verification code</Preview>
+    <Preview>Your PGX Leads verification code</Preview>
     <Body style={main}>
       <Container style={container}>
         <Section style={header}>
-          <Heading style={brand}>MayaX</Heading>
+          <Heading style={brand}>PGX Leads</Heading>
         </Section>
         <Section style={content}>
           <Heading style={h1}>Confirm reauthentication 🔒</Heading>
@@ -35,7 +35,7 @@ export const ReauthenticationEmail = ({ token }: ReauthenticationEmailProps) => 
           <Text style={footer}>
             This code expires shortly. If you didn't request this, you can safely ignore this email.
           </Text>
-          <Text style={footerSmall}>— The MayaX Team</Text>
+          <Text style={footerSmall}>— The PGX Leads Team</Text>
         </Section>
       </Container>
     </Body>

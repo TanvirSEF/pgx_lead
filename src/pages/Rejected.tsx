@@ -11,7 +11,7 @@ const Rejected = () => (
       <p className="text-muted-foreground mb-6">
         Unfortunately your application was not approved. Please contact support for more information.
       </p>
-      <Button variant="outline" className="border-border text-foreground hover:bg-muted" onClick={() => window.open("mailto:support@mayaxleadhub.com")}>
+      <Button variant="outline" className="border-border text-foreground hover:bg-muted" onClick={() => window.open("mailto:support@pgxleads.shop")}>
         Contact Support
       </Button>
     </div>

@@ -191,7 +191,7 @@ const Login = () => {
 
           <img
             src={logoSrc}
-            alt={settings?.theme_website_name || "MayaX Lead Hub"}
+            alt={settings?.theme_website_name || "PGX Leads"}
             className="w-66 h-66 lg:w-84 lg:h-84 object-contain drop-shadow-[0_0_50px_rgba(139,92,246,0.35)] mb-4"
           />
 

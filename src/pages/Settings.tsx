@@ -706,7 +706,7 @@ const Settings = () => {
               <div className="space-y-2">
                 <Label className="text-xs text-muted-foreground">Webhook Secret</Label>
                 <p className="text-[10px] text-muted-foreground">
-                  Used to sign payloads so you can verify they came from MayaX.
+                  Used to sign payloads so you can verify they came from PGX Leads.
                 </p>
                 <div className="flex gap-2">
                   <div className="relative flex-1">

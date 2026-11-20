@@ -52,9 +52,9 @@ const LeadsPurchasedBulkEmail = ({
         <Container style={container}>
           <Section style={header}>
             {logo_url ? (
-              <Img src={logo_url} alt="MayaX" width="140" style={logo} />
+              <Img src={logo_url} alt="PGX Leads" width="140" style={logo} />
             ) : (
-              <Heading style={brand}>MayaX</Heading>
+              <Heading style={brand}>PGX Leads</Heading>
             )}
           </Section>
 
@@ -125,7 +125,7 @@ const LeadsPurchasedBulkEmail = ({
             <Text style={footer}>
               Contact these leads promptly for the best conversion rate. Good luck!
             </Text>
-            <Text style={footerSmall}>— The MayaX Team</Text>
+            <Text style={footerSmall}>— The PGX Leads Team</Text>
           </Section>
         </Container>
       </Body>

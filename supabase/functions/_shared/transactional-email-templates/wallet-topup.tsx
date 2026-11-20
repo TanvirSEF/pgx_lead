@@ -46,13 +46,13 @@ const WalletTopupEmail = ({
       <Body style={main}>
         <Container style={container}>
           <Section style={header}>
-            <Heading style={brand}>MayaX</Heading>
+            <Heading style={brand}>PGX Leads</Heading>
           </Section>
 
           <Section style={content}>
             <Heading style={h1}>Wallet Top-Up Confirmed ✅</Heading>
             <Text style={text}>
-              Hi <strong>{dealership_name}</strong>, we've successfully credited your MayaX wallet.
+              Hi <strong>{dealership_name}</strong>, we've successfully credited your PGX Leads wallet.
             </Text>
 
             <Section style={amountBox}>
@@ -85,7 +85,7 @@ const WalletTopupEmail = ({
             <Text style={footer}>
               Your funds are now available to purchase leads in the marketplace.
             </Text>
-            <Text style={footerSmall}>— The MayaX Team</Text>
+            <Text style={footerSmall}>— The PGX Leads Team</Text>
           </Section>
         </Container>
       </Body>

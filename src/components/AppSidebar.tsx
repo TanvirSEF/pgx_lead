@@ -65,7 +65,7 @@ export function AppSidebar({ walletBalance = 0, onLogout }: AppSidebarProps) {
   const location = useLocation();
   const { data: settings } = usePlatformSettings();
   const logoSrc = settings?.theme_logo_url || fallbackLogo;
-  const siteName = settings?.theme_website_name || "MayaX";
+  const siteName = settings?.theme_website_name || "PGX Leads";
   const [isAdmin, setIsAdmin] = useState(false);
 
   useEffect(() => {
@@ -288,12 +288,12 @@ export function AppSidebar({ walletBalance = 0, onLogout }: AppSidebarProps) {
         </SidebarMenu>
         {!collapsed && (
           <a
-            href="mailto:Leads@mayax.ca"
+            href="mailto:support@pgxleads.shop"
             className="mt-2 flex items-center gap-2 px-3 py-2 rounded-md text-xs text-muted-foreground hover:text-primary hover:bg-sidebar-accent transition-colors"
             title="Contact support"
           >
             <Mail className="h-3.5 w-3.5 shrink-0" />
-            <span className="truncate">Leads@mayax.ca</span>
+            <span className="truncate">support@pgxleads.shop</span>
           </a>
         )}
       </SidebarFooter>

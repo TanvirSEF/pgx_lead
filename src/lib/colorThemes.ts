@@ -52,7 +52,7 @@ export interface ColorTheme {
 export const COLOR_THEMES: ColorTheme[] = [
   {
     id: "default",
-    name: "MayaX Blue",
+    name: "PGX Blue",
     description: "Default blue & purple theme",
     colors: {
       background: "220 47% 5%",

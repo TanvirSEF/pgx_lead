@@ -10,7 +10,7 @@ export default function AdminEmailSetup() {
         </div>
 
         <p className="text-xs text-muted-foreground leading-relaxed">
-          Set up a verified sender domain so MayaX can send branded emails (lead purchase confirmations,
+          Set up a verified sender domain so PGX Leads can send branded emails (lead purchase confirmations,
           notifications, password resets) from your own domain — e.g. <code className="text-foreground">notify@yourdomain.com</code>.
           This improves deliverability and trust.
         </p>

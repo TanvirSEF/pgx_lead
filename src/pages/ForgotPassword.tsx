@@ -64,7 +64,7 @@ const ForgotPassword = () => {
         />
 
         <div className="flex justify-center mb-6">
-          <img src={logo} alt="MayaX Lead Hub" className="w-20 h-20 object-contain" />
+          <img src={logo} alt="PGX Leads" className="w-20 h-20 object-contain" />
         </div>
 
         {sent ? (

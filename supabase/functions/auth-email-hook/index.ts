@@ -36,10 +36,10 @@ const EMAIL_TEMPLATES: Record<string, React.ComponentType<any>> = {
 }
 
 // Configuration
-const SITE_NAME = "MayaX Lead Hub"
-const SENDER_DOMAIN = "notify.mayax.ca"
-const ROOT_DOMAIN = "mayax.ca"
-const FROM_DOMAIN = "mayax.ca" // Domain shown in From address (may be root or sender subdomain)
+const SITE_NAME = "PGX Leads"
+const SENDER_DOMAIN = "notify.pgxleads.shop"
+const ROOT_DOMAIN = "pgxleads.shop"
+const FROM_DOMAIN = "pgxleads.shop" // Domain shown in From address (may be root or sender subdomain)
 
 // Sample data for preview mode ONLY (not used in actual email sending).
 // URLs are baked in at scaffold time from the project's real data.

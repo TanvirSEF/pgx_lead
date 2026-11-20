@@ -75,7 +75,7 @@ const WelcomeDialog = ({ dealerName, dealerId, onAccepted }: WelcomeDialogProps)
               <div className="space-y-5 text-sm text-muted-foreground">
                 <section>
                   <h3 className="text-base font-semibold text-foreground mb-2">
-                    Getting Started with MayaX Lead Hub
+                    Getting Started with PGX Leads
                   </h3>
                   <p>
                     Welcome aboard! Here's a quick guide to help you make the most of the platform.
@@ -173,13 +173,13 @@ const WelcomeDialog = ({ dealerName, dealerId, onAccepted }: WelcomeDialogProps)
                   <h3 className="text-base font-semibold text-foreground mb-2">Terms and Conditions</h3>
 
                   <h4 className="font-medium text-foreground mt-3 mb-1">1. Platform Usage</h4>
-                  <p>By accessing and using MayaX Lead Hub, you agree to comply with these terms. The platform provides automotive lead generation and distribution services exclusively for registered and approved dealerships.</p>
+                  <p>By accessing and using PGX Leads, you agree to comply with these terms. The platform provides automotive lead generation and distribution services exclusively for registered and approved dealerships.</p>
 
                   <h4 className="font-medium text-foreground mt-3 mb-1">2. Lead Purchasing</h4>
                   <p>All leads purchased through the marketplace are non-exclusive unless otherwise specified. Lead prices are determined by data quality, completeness, and market factors. Once a lead is purchased, the transaction is final and the lead data is delivered to your account.</p>
 
                   <h4 className="font-medium text-foreground mt-3 mb-1">3. Wallet & Payments</h4>
-                  <p>Funds added to your wallet are used to purchase leads. Wallet balances are non-refundable except at the sole discretion of MayaX. All payment transactions are recorded and visible in your account history.</p>
+                  <p>Funds added to your wallet are used to purchase leads. Wallet balances are non-refundable except at the sole discretion of PGX Leads. All payment transactions are recorded and visible in your account history.</p>
 
                   <h4 className="font-medium text-foreground mt-3 mb-1">4. Subscription Plans</h4>
                   <p>Subscription plans provide access tiers with different lead access delays and monthly limits. Plan changes take effect at the next billing cycle. Auto-renewal is enabled by default and can be managed in your settings.</p>
@@ -188,10 +188,10 @@ const WelcomeDialog = ({ dealerName, dealerId, onAccepted }: WelcomeDialogProps)
                   <p>You agree not to: share lead data with unauthorized parties, use automated tools to scrape the platform, misrepresent your dealership information, or engage in any fraudulent activity. Violations may result in account suspension.</p>
 
                   <h4 className="font-medium text-foreground mt-3 mb-1">6. Data Accuracy</h4>
-                  <p>While we strive to provide accurate lead information, MayaX does not guarantee the accuracy or completeness of any lead data. Leads are provided "as-is" based on information submitted by consumers.</p>
+                  <p>While we strive to provide accurate lead information, PGX Leads does not guarantee the accuracy or completeness of any lead data. Leads are provided "as-is" based on information submitted by consumers.</p>
 
                   <h4 className="font-medium text-foreground mt-3 mb-1">7. Limitation of Liability</h4>
-                  <p>MayaX shall not be liable for any indirect, incidental, or consequential damages arising from the use of the platform or any lead data purchased through it.</p>
+                  <p>PGX Leads shall not be liable for any indirect, incidental, or consequential damages arising from the use of the platform or any lead data purchased through it.</p>
                 </section>
 
                 <section>
