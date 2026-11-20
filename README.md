@@ -1,6 +1,6 @@
-# MayaX Lead Hub
+# PGX Leads
 
-MayaX Lead Hub is a modern B2B lead generation, grading, and marketplace platform. It allows businesses and agents to ingest, score, discover, and purchase verified leads with integrated wallet billing and automated webhook pipelines.
+PGX Leads is a modern B2B lead generation, grading, and marketplace platform. It allows businesses and agents to ingest, score, discover, and purchase verified leads with integrated wallet billing and automated webhook pipelines.
 
 ---
 

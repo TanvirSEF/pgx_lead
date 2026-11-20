@@ -336,7 +336,7 @@ function buildSuggestedFix(lead: any): string {
     `Add "first_name" and "last_name" as non-empty strings to the JSON body${ctx}. ` +
     `Example: {"first_name":"John","last_name":"Doe"}. ` +
     `Tip: if your source only has a single "name" field, send it as "name":"John Doe" and enable ` +
-    `"Auto-fill missing names" in MayaX webhook settings.`
+    `"Auto-fill missing names" in PGX Leads webhook settings.`
   );
 }
 
@@ -878,7 +878,7 @@ Deno.serve(async (req) => {
         const rejectionError =
           `Schema validation failed (${fieldErrors.length} field error${fieldErrors.length === 1 ? "" : "s"}):\n${summary}\n\n` +
           `Suggested fix: open your Make.com HTTP module and re-map each field listed above. ` +
-          `See the Make.com Integration Guide in MayaX admin for the full mapping table.`;
+          `See the Make.com Integration Guide in PGX Leads admin for the full mapping table.`;
         if (!dryRun) {
           try {
             await admin.from("rejected_inbound_leads").insert({
@@ -963,7 +963,7 @@ Deno.serve(async (req) => {
         const rejectionError =
           `Field-shape validation failed${strictMode ? " (strict mode)" : ""}:\n${allMessages}\n\n` +
           `Suggested fix: open your Make.com HTTP module and verify each variable is mapped to the correct JSON key. ` +
-          `See the Make.com Integration Guide in MayaX admin for the full mapping table.`;
+          `See the Make.com Integration Guide in PGX Leads admin for the full mapping table.`;
         if (!dryRun) {
           try {
             await admin.from("rejected_inbound_leads").insert({

@@ -81,7 +81,7 @@ Deno.serve(async (req) => {
       trade_in: true,
       "trade_in vehicle": "2018 Honda Civic",
       bankruptcy: "",
-      notes: "This is a TEST payload sent from MayaX webhook settings.",
+      notes: "This is a TEST payload sent from PGX Leads webhook settings.",
     };
     const body = JSON.stringify(payload);
 

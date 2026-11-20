@@ -329,7 +329,7 @@ class MockSupabaseDB {
 // TEST SUITE: 11 COMPREHENSIVE VERIFICATION PHASES
 // =========================================================================
 
-describe("MayaX AutoBuy & Dealership Webhook Complete Verification Pass", () => {
+describe("PGX Leads AutoBuy & Dealership Webhook Complete Verification Pass", () => {
   let db: MockSupabaseDB;
   const driveXDealer = {
     id: "drivex-canada-id",
