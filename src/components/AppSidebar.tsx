@@ -36,7 +36,7 @@ import {
   useSidebar,
 } from "@/components/ui/sidebar";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
-import fallbackLogo from "@/assets/mayax-logo.jpg";
+import fallbackLogo from "@/assets/pgx-logo.jpg";
 
 const mainItems = [
   { title: "Dashboard", url: "/dashboard", icon: LayoutDashboard },

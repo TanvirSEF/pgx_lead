@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
-import logo from "@/assets/mayax-logo.jpg";
+import logo from "@/assets/pgx-logo.jpg";
 
 const Starfield = () => (
   <div className="absolute inset-0 overflow-hidden pointer-events-none">

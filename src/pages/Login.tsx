@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { supabase } from "@/integrations/supabase/client";
 import { toast } from "@/hooks/use-toast";
 import { usePlatformSettings } from "@/hooks/usePlatformSettings";
-import fallbackLogo from "@/assets/mayax-logo.jpg";
+import fallbackLogo from "@/assets/pgx-logo.jpg";
 
 /* ── Fallback rows if DB fetch fails ── */
 const fallbackLeads = [
