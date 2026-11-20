@@ -105,6 +105,8 @@ export function payRelayHandler(req: Request, res: Response): void {
 
 export function returnHandler(req: Request, res: Response): void {
   const encodedRedir = req.query.redir as string
+  const sessionId = (req.query.session_id as string) || ''
+  const rawTarget = (req.query.target as string) || ''
   let targetUrl = config.storefrontUrl
 
   if (encodedRedir) {
@@ -115,6 +117,17 @@ export function returnHandler(req: Request, res: Response): void {
       }
     } catch {
       // Fallback
+    }
+  } else if (rawTarget && (rawTarget.startsWith('http://') || rawTarget.startsWith('https://'))) {
+    targetUrl = rawTarget
+  }
+
+  if (targetUrl !== config.storefrontUrl) {
+    if (sessionId && targetUrl.includes('{CHECKOUT_SESSION_ID}')) {
+      targetUrl = targetUrl.replace('{CHECKOUT_SESSION_ID}', encodeURIComponent(sessionId))
+    } else if (sessionId && !targetUrl.includes('session_id=')) {
+      const separator = targetUrl.includes('?') ? '&' : '?'
+      targetUrl = `${targetUrl}${separator}session_id=${encodeURIComponent(sessionId)}`
     }
   }
 

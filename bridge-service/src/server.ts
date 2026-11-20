@@ -40,12 +40,10 @@ app.get('/', (_req, res) => {
 })
 
 // Webhook endpoint requires raw body for Stripe signature validation
-app.post(
-  '/api/gateway-bridge/webhook',
-  express.raw({ type: 'application/json' }),
-  (req, res, next) => {
-    // If body is raw Buffer and secret is not configured, parse it as JSON for convenience
-    if (!config.stripeWebhookSecret && Buffer.isBuffer(req.body)) {
+const rawBodyParser = [
+  express.raw({ type: '*/*' }),
+  (req: express.Request, _res: express.Response, next: express.NextFunction) => {
+    if (Buffer.isBuffer(req.body) && !config.stripeWebhookSecret) {
       try {
         req.body = JSON.parse(req.body.toString('utf-8'))
       } catch {
@@ -54,16 +52,24 @@ app.post(
     }
     next()
   },
-  webhookHandler
-)
+  webhookHandler,
+]
+
+app.post('/api/gateway-bridge/webhook', ...rawBodyParser)
+app.post('/webhook', ...rawBodyParser)
 
 // JSON body parser for all other routes
 app.use(express.json())
 
-// Bridge endpoints
+// Bridge endpoints (Mounted under both /api/gateway-bridge and / for maximum reverse-proxy resilience)
 app.post('/api/gateway-bridge/initiate', initiateHandler)
+app.post('/initiate', initiateHandler)
+
 app.get('/api/gateway-bridge/pay', payRelayHandler)
+app.get('/pay', payRelayHandler)
+
 app.get('/api/gateway-bridge/return', returnHandler)
+app.get('/return', returnHandler)
 
 // Error handling
 app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
