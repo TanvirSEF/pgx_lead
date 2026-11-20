@@ -1,0 +1,1107 @@
+const parseNum = (v: string) => Number(v.replace(/,/g, ""));
+const formatAmount = (v: string) => {
+  const digits = v.replace(/[^0-9]/g, "");
+  if (!digits) return "";
+  return Number(digits).toLocaleString("en-US");
+};
+import { useState, useEffect } from "react";
+import { Checkbox } from "@/components/ui/checkbox";
+import {
+  Users,
+  FileText,
+  Settings2,
+  CheckCircle2,
+  XCircle,
+  Clock,
+  Ban,
+  Eye,
+  Search,
+  RefreshCw,
+  Save,
+  Shield,
+  Palette,
+  TrendingUp,
+  DollarSign,
+  Package,
+  CreditCard,
+  Trash2,
+  Pencil,
+  Tag,
+  Webhook,
+  Mail,
+  BookOpen,
+} from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
+  Dialog,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { cn } from "@/lib/utils";
+import { toast } from "@/hooks/use-toast";
+import AdminPlanManager from "@/components/AdminPlanManager";
+import AdminPaymentManager from "@/components/AdminPaymentManager";
+import AdminStripeSessions from "@/components/AdminStripeSessions";
+import AdminBrandingSettings from "@/components/AdminBrandingSettings";
+import AdminUserManager from "@/components/AdminUserManager";
+import AdminPromoCodeManager from "@/components/AdminPromoCodeManager";
+import AdminPromoUsageHistory from "@/components/AdminPromoUsageHistory";
+import AdminWebhookSettings from "@/components/AdminWebhookSettings";
+import AdminLeadPricingSettings from "@/components/AdminLeadPricingSettings";
+import AdminGradeSettings from "@/components/AdminGradeSettings";
+import AdminLeadRequests from "@/components/AdminLeadRequests";
+import AdminEmailSetup from "@/components/AdminEmailSetup";
+import { AdminFindDuplicates } from "@/components/AdminFindDuplicates";
+import AdminKnowledgeBase from "@/components/AdminKnowledgeBase";
+import LeadFileUploader from "@/components/LeadFileUploader";
+import AdminLeadTable, { type AdminLead } from "@/components/AdminLeadTable";
+
+/* ─── Types ─── */
+interface Dealer {
+  id: string;
+  dealership_name: string;
+  contact_person: string;
+  email: string;
+  phone: string | null;
+  province: string | null;
+  approval_status: string;
+  subscription_tier: string;
+  wallet_balance: number;
+  created_at: string;
+}
+
+interface LeadFileEntry {
+  name: string;
+  path: string;
+}
+
+interface Lead extends AdminLead {}
+
+/* ─── Helpers ─── */
+const statusConfig: Record<string, { color: string; icon: typeof CheckCircle2 }> = {
+  approved: { color: "bg-success/20 text-success", icon: CheckCircle2 },
+  pending: { color: "bg-warning/20 text-warning", icon: Clock },
+  rejected: { color: "bg-destructive/20 text-destructive", icon: XCircle },
+  suspended: { color: "bg-muted text-muted-foreground", icon: Ban },
+};
+
+const gradeColors: Record<string, string> = {
+  "A+": "bg-gold/20 text-gold",
+  A: "bg-primary/20 text-primary",
+  B: "bg-cyan/20 text-cyan",
+  C: "bg-muted text-muted-foreground",
+};
+
+/* ─── Component ─── */
+const AdminDashboard = () => {
+  const [dealers, setDealers] = useState<Dealer[]>([]);
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [dealerSearch, setDealerSearch] = useState("");
+  const [leadSearch, setLeadSearch] = useState(""); // kept for backwards compat
+  const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [selectedDealer, setSelectedDealer] = useState<Dealer | null>(null);
+  const [selectedLead, setSelectedLead] = useState<Lead | null>(null);
+  const [editingDealer, setEditingDealer] = useState(false);
+  const [deletingDealer, setDeletingDealer] = useState(false);
+  const [dealerEditForm, setDealerEditForm] = useState({
+    dealership_name: "", contact_person: "", email: "", phone: "",
+    province: "", approval_status: "pending", subscription_tier: "basic",
+    wallet_balance: "0",
+  });
+  const [savingDealer, setSavingDealer] = useState(false);
+
+  // Platform settings state
+  const [platformSettings, setPlatformSettings] = useState<Record<string, string>>({});
+  const [settingsForm, setSettingsForm] = useState<Record<string, string>>({});
+  const [savingSettings, setSavingSettings] = useState(false);
+
+  const fetchData = async () => {
+    setLoading(true);
+    const [{ data: d }, { data: l }, { data: s }] = await Promise.all([
+      supabase.from("dealers").select("*").order("created_at", { ascending: false }),
+      supabase.from("leads").select("*").order("created_at", { ascending: false }),
+      supabase.from("platform_settings").select("*"),
+    ]);
+    setDealers((d as Dealer[]) ?? []);
+    setLeads((l as unknown as Lead[]) ?? []);
+    const settingsMap: Record<string, string> = {};
+    (s ?? []).forEach((row: any) => { settingsMap[row.key] = row.value ?? ""; });
+    setPlatformSettings(settingsMap);
+    setSettingsForm(settingsMap);
+    setLoading(false);
+  };
+
+  useEffect(() => { fetchData(); }, []);
+
+  /* ─── Dealer Actions ─── */
+  const updateDealerStatus = async (dealerId: string, status: string) => {
+    const { error } = await supabase.from("dealers").update({ approval_status: status }).eq("id", dealerId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Updated", description: `Dealer status set to ${status}.` });
+      setDealers((prev) => prev.map((d) => d.id === dealerId ? { ...d, approval_status: status } : d));
+      setSelectedDealer(null);
+    }
+  };
+
+  const updateDealerTier = async (dealerId: string, tier: string) => {
+    const { error } = await supabase.from("dealers").update({ subscription_tier: tier }).eq("id", dealerId);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Updated", description: `Dealer tier set to ${tier}.` });
+      setDealers((prev) => prev.map((d) => d.id === dealerId ? { ...d, subscription_tier: tier } : d));
+    }
+  };
+
+  const openEditDealer = (d: Dealer) => {
+    setSelectedDealer(d);
+    setDealerEditForm({
+      dealership_name: d.dealership_name,
+      contact_person: d.contact_person,
+      email: d.email,
+      phone: d.phone ?? "",
+      province: d.province ?? "",
+      approval_status: d.approval_status,
+      subscription_tier: d.subscription_tier,
+      wallet_balance: Number(d.wallet_balance ?? 0).toFixed(2),
+    });
+    setEditingDealer(true);
+  };
+
+  const saveEditDealer = async () => {
+    if (!selectedDealer) return;
+
+    const newBalance = parseFloat(dealerEditForm.wallet_balance);
+    if (isNaN(newBalance) || newBalance < 0) {
+      toast({ title: "Invalid wallet balance", description: "Must be a non-negative number.", variant: "destructive" });
+      return;
+    }
+
+    setSavingDealer(true);
+    const { error } = await supabase.from("dealers").update({
+      dealership_name: dealerEditForm.dealership_name,
+      contact_person: dealerEditForm.contact_person,
+      email: dealerEditForm.email,
+      phone: dealerEditForm.phone || null,
+      province: dealerEditForm.province || null,
+      approval_status: dealerEditForm.approval_status,
+      subscription_tier: dealerEditForm.subscription_tier,
+      wallet_balance: newBalance,
+    }).eq("id", selectedDealer.id);
+
+    if (error) {
+      setSavingDealer(false);
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+      return;
+    }
+
+    // Log wallet adjustment if balance changed
+    const prevBalance = Number(selectedDealer.wallet_balance ?? 0);
+    const delta = newBalance - prevBalance;
+    if (Math.abs(delta) > 0.001) {
+      await supabase.from("wallet_transactions").insert({
+        dealer_id: selectedDealer.id,
+        amount: delta,
+        balance_after: newBalance,
+        type: delta > 0 ? "adjustment_credit" : "adjustment_debit",
+        description: `Admin wallet adjustment (${delta > 0 ? "+" : ""}$${delta.toFixed(2)})`,
+        reference_id: `admin-edit-${Date.now()}`,
+      });
+    }
+
+    setSavingDealer(false);
+    toast({ title: "Updated", description: `${dealerEditForm.dealership_name} updated successfully.` });
+    setEditingDealer(false);
+    setSelectedDealer(null);
+    fetchData();
+  };
+
+  const openDeleteDealer = (d: Dealer) => {
+    setSelectedDealer(d);
+    setDeletingDealer(true);
+  };
+
+  const confirmDeleteDealer = async () => {
+    if (!selectedDealer) return;
+    setSavingDealer(true);
+    const { error } = await supabase.from("dealers").delete().eq("id", selectedDealer.id);
+    setSavingDealer(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Deleted", description: `${selectedDealer.dealership_name} has been removed.` });
+      setDealers((prev) => prev.filter((d) => d.id !== selectedDealer.id));
+      setDeletingDealer(false);
+      setSelectedDealer(null);
+    }
+  };
+
+
+  const savePlatformSettings = async () => {
+    setSavingSettings(true);
+    const entries = Object.entries(settingsForm);
+    for (const [key, value] of entries) {
+      if (platformSettings[key] !== undefined) {
+        await supabase.from("platform_settings").update({ value }).eq("key", key);
+      } else {
+        await supabase.from("platform_settings").insert({ key, value });
+      }
+    }
+    setPlatformSettings({ ...settingsForm });
+    setSavingSettings(false);
+    toast({ title: "Saved", description: "Platform settings updated." });
+  };
+
+  /* ─── Delete Lead ─── */
+  const [deletingLead, setDeletingLead] = useState(false);
+  const [confirmDelete, setConfirmDelete] = useState(false);
+
+  const deleteLead = async (leadId: string) => {
+    setDeletingLead(true);
+    const { error } = await supabase.from("leads").delete().eq("id", leadId);
+    setDeletingLead(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Deleted", description: "Lead has been removed." });
+      setLeads((prev) => prev.filter((l) => l.id !== leadId));
+      setSelectedLead(null);
+      setConfirmDelete(false);
+    }
+  };
+
+  /* ─── Edit Lead ─── */
+  const [editingLead, setEditingLead] = useState(false);
+  const [savingLead, setSavingLead] = useState(false);
+  const [editForm, setEditForm] = useState({
+    first_name: "", last_name: "", email: "", phone: "",
+    city: "", province: "", quality_grade: "B", ai_score: "",
+    price: "", sold_status: "available",
+    buyer_type: "online", vehicle_preference: "", vehicle_price: "",
+    vehicle_mileage: "", income: "", credit_range_min: "", credit_range_max: "",
+    notes: "", appointment_time: "", trade_in: false, has_bankruptcy: false,
+    trade_in_vehicle: "",
+  });
+
+  const saveLeadEdits = async () => {
+    if (!selectedLead) return;
+    setSavingLead(true);
+    const updates = {
+      first_name: editForm.first_name,
+      last_name: editForm.last_name,
+      email: editForm.email || null,
+      phone: editForm.phone || null,
+      city: editForm.city || null,
+      province: editForm.province || null,
+      quality_grade: editForm.quality_grade,
+      ai_score: editForm.ai_score ? parseNum(editForm.ai_score) : 0,
+      price: parseNum(editForm.price),
+      sold_status: editForm.sold_status,
+      buyer_type: editForm.buyer_type || null,
+      vehicle_preference: editForm.vehicle_preference || null,
+      vehicle_price: editForm.vehicle_price ? parseNum(editForm.vehicle_price) : null,
+      vehicle_mileage: editForm.vehicle_mileage ? parseNum(editForm.vehicle_mileage) : null,
+      income: editForm.income ? parseNum(editForm.income) : null,
+      credit_range_min: editForm.credit_range_min ? parseNum(editForm.credit_range_min) : null,
+      credit_range_max: editForm.credit_range_max ? parseNum(editForm.credit_range_max) : null,
+      notes: editForm.notes || null,
+      appointment_time: editForm.appointment_time || null,
+      trade_in: editForm.trade_in,
+      has_bankruptcy: editForm.has_bankruptcy,
+      trade_in_vehicle: editForm.trade_in ? (editForm.trade_in_vehicle || null) : null,
+    };
+    const { error } = await supabase.from("leads").update(updates).eq("id", selectedLead.id);
+    setSavingLead(false);
+    if (error) {
+      toast({ title: "Error", description: error.message, variant: "destructive" });
+    } else {
+      toast({ title: "Updated", description: "Lead updated successfully." });
+      const updated = { ...selectedLead, ...updates };
+      setSelectedLead(updated as Lead);
+      setLeads((prev) => prev.map((l) => l.id === selectedLead.id ? { ...l, ...updates } as Lead : l));
+      setEditingLead(false);
+    }
+  };
+
+  /* ─── Filtered Data ─── */
+  const filteredDealers = dealers.filter((d) => {
+    const matchSearch =
+      d.dealership_name.toLowerCase().includes(dealerSearch.toLowerCase()) ||
+      d.email.toLowerCase().includes(dealerSearch.toLowerCase()) ||
+      d.contact_person.toLowerCase().includes(dealerSearch.toLowerCase());
+    const matchStatus = statusFilter === "all" || d.approval_status === statusFilter;
+    return matchSearch && matchStatus;
+  });
+
+  const filteredLeads = leads.filter((l) =>
+    l.reference_code.toLowerCase().includes(leadSearch.toLowerCase()) ||
+    l.first_name.toLowerCase().includes(leadSearch.toLowerCase()) ||
+    l.last_name.toLowerCase().includes(leadSearch.toLowerCase())
+  );
+
+  /* ─── Stats ─── */
+  const totalDealers = dealers.length;
+  const approvedDealers = dealers.filter((d) => d.approval_status === "approved").length;
+  const pendingDealers = dealers.filter((d) => d.approval_status === "pending").length;
+  const totalLeads = leads.length;
+  const availableLeads = leads.filter((l) => l.sold_status === "available").length;
+  const totalRevenue = leads.filter((l) => l.sold_status === "sold").reduce((sum, l) => sum + Number(l.price), 0);
+
+  if (loading) {
+    return (
+      <div className="p-6 space-y-6 animate-pulse">
+        <div className="h-8 w-64 bg-muted rounded" />
+        <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          {[...Array(4)].map((_, i) => <div key={i} className="h-28 bg-card rounded-xl" />)}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="p-6 space-y-6 max-w-7xl mx-auto">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <div className="flex items-center gap-2">
+            <Shield className="h-5 w-5 text-gold" />
+            <h1 className="text-2xl font-bold text-foreground">Admin Dashboard</h1>
+          </div>
+          <p className="text-muted-foreground text-sm mt-1">
+            Manage dealers, leads, and platform configuration
+          </p>
+        </div>
+        <Button variant="outline" size="sm" onClick={fetchData} className="gap-2">
+          <RefreshCw className="h-4 w-4" /> Refresh
+        </Button>
+      </div>
+
+      {/* Summary Cards */}
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="glass-card p-5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">Total Dealers</span>
+            <div className="h-8 w-8 rounded-lg bg-primary/15 flex items-center justify-center">
+              <Users className="h-4 w-4 text-primary" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-foreground">{totalDealers}</p>
+          <p className="text-xs text-muted-foreground">{approvedDealers} approved · {pendingDealers} pending</p>
+        </div>
+        <div className="glass-card p-5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">Total Leads</span>
+            <div className="h-8 w-8 rounded-lg bg-cyan/15 flex items-center justify-center">
+              <FileText className="h-4 w-4 text-cyan" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-foreground">{totalLeads}</p>
+          <p className="text-xs text-muted-foreground">{availableLeads} available</p>
+        </div>
+        <div className="glass-card p-5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">Revenue</span>
+            <div className="h-8 w-8 rounded-lg bg-gold/15 flex items-center justify-center">
+              <DollarSign className="h-4 w-4 text-gold" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-foreground">${totalRevenue.toFixed(2)}</p>
+          <p className="text-xs text-muted-foreground">From sold leads</p>
+        </div>
+        <div className="glass-card p-5 space-y-2">
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-muted-foreground uppercase tracking-wide">Pending Approvals</span>
+            <div className="h-8 w-8 rounded-lg bg-warning/15 flex items-center justify-center">
+              <Clock className="h-4 w-4 text-warning" />
+            </div>
+          </div>
+          <p className="text-2xl font-bold text-warning">{pendingDealers}</p>
+          <p className="text-xs text-muted-foreground">Require review</p>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <Tabs defaultValue="dealers" className="space-y-6">
+        <TabsList className="bg-card border border-border flex flex-wrap h-auto justify-start gap-1 p-1 w-full">
+          <TabsTrigger value="dealers" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <Users className="h-4 w-4" /> Dealers
+          </TabsTrigger>
+          <TabsTrigger value="leads" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <FileText className="h-4 w-4" /> Leads
+          </TabsTrigger>
+          <TabsTrigger value="settings" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <Settings2 className="h-4 w-4" /> Platform Settings
+          </TabsTrigger>
+          <TabsTrigger value="plans" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <CreditCard className="h-4 w-4" /> Plans
+          </TabsTrigger>
+          <TabsTrigger value="payments" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <DollarSign className="h-4 w-4" /> Payments
+          </TabsTrigger>
+          <TabsTrigger value="branding" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <Palette className="h-4 w-4" /> Branding
+          </TabsTrigger>
+          <TabsTrigger value="users" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <Users className="h-4 w-4" /> User Management
+          </TabsTrigger>
+          <TabsTrigger value="promos" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <Tag className="h-4 w-4" /> Promo Codes
+          </TabsTrigger>
+          <TabsTrigger value="lead-pricing" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <TrendingUp className="h-4 w-4" /> Lead Pricing
+          </TabsTrigger>
+          <TabsTrigger value="grading" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <TrendingUp className="h-4 w-4" /> Grade & AI Score
+          </TabsTrigger>
+          <TabsTrigger value="webhooks" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <Webhook className="h-4 w-4" /> Webhooks
+          </TabsTrigger>
+          <TabsTrigger value="lead-requests" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <FileText className="h-4 w-4" /> Lead Requests
+          </TabsTrigger>
+          <TabsTrigger value="email-setup" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <Mail className="h-4 w-4" /> Email Setup
+          </TabsTrigger>
+          <TabsTrigger value="duplicates" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <Search className="h-4 w-4" /> Find Duplicates
+          </TabsTrigger>
+          <TabsTrigger value="knowledge-base" className="gap-2 data-[state=active]:bg-primary/15 data-[state=active]:text-primary">
+            <BookOpen className="h-4 w-4" /> Knowledge Base
+          </TabsTrigger>
+        </TabsList>
+
+        {/* ─── Dealers Tab ─── */}
+        <TabsContent value="dealers" className="space-y-4">
+          <div className="flex flex-col sm:flex-row gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search dealers..."
+                value={dealerSearch}
+                onChange={(e) => setDealerSearch(e.target.value)}
+                className="pl-9 bg-card border-border"
+              />
+            </div>
+            <Select value={statusFilter} onValueChange={setStatusFilter}>
+              <SelectTrigger className="w-[180px] bg-card border-border">
+                <SelectValue placeholder="Filter by status" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Statuses</SelectItem>
+                <SelectItem value="approved">Approved</SelectItem>
+                <SelectItem value="pending">Pending</SelectItem>
+                <SelectItem value="rejected">Rejected</SelectItem>
+                <SelectItem value="suspended">Suspended</SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+
+          <div className="glass-card overflow-hidden">
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead>
+                  <tr className="border-b border-border">
+                    <th className="text-left p-3 text-xs text-muted-foreground font-medium">Dealership</th>
+                    <th className="text-left p-3 text-xs text-muted-foreground font-medium">Contact</th>
+                    <th className="text-left p-3 text-xs text-muted-foreground font-medium">Province</th>
+                    <th className="text-left p-3 text-xs text-muted-foreground font-medium">Status</th>
+                    <th className="text-left p-3 text-xs text-muted-foreground font-medium">Tier</th>
+                    <th className="text-right p-3 text-xs text-muted-foreground font-medium">Balance</th>
+                    <th className="text-right p-3 text-xs text-muted-foreground font-medium">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-border">
+                  {filteredDealers.map((d) => {
+                    const st = statusConfig[d.approval_status] ?? statusConfig.pending;
+                    const StIcon = st.icon;
+                    return (
+                      <tr key={d.id} className="hover:bg-muted/20 transition-colors">
+                        <td className="p-3">
+                          <p className="font-medium text-foreground">{d.dealership_name}</p>
+                          <p className="text-xs text-muted-foreground">{d.email}</p>
+                        </td>
+                        <td className="p-3 text-muted-foreground">{d.contact_person}</td>
+                        <td className="p-3 text-muted-foreground">{d.province ?? "—"}</td>
+                        <td className="p-3">
+                          <Badge className={cn("gap-1 border-0 text-[10px]", st.color)}>
+                            <StIcon className="h-3 w-3" />
+                            {d.approval_status}
+                          </Badge>
+                        </td>
+                        <td className="p-3">
+                          <Select value={d.subscription_tier} onValueChange={(v) => updateDealerTier(d.id, v)}>
+                            <SelectTrigger className="h-7 text-xs bg-card border-border w-24">
+                              <SelectValue />
+                            </SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="basic">Basic</SelectItem>
+                              <SelectItem value="pro">Pro</SelectItem>
+                              <SelectItem value="elite">Elite</SelectItem>
+                              <SelectItem value="vip">VIP</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </td>
+                        <td className="p-3 text-right font-mono text-foreground">${Number(d.wallet_balance).toFixed(2)}</td>
+                        <td className="p-3 text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="View" onClick={() => setSelectedDealer(d)}>
+                              <Eye className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Edit" onClick={() => openEditDealer(d)}>
+                              <Pencil className="h-3.5 w-3.5 text-muted-foreground" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7" title="Delete" onClick={() => openDeleteDealer(d)}>
+                              <Trash2 className="h-3.5 w-3.5 text-destructive" />
+                            </Button>
+                          </div>
+                        </td>
+                      </tr>
+                    );
+                  })}
+                  {filteredDealers.length === 0 && (
+                    <tr>
+                      <td colSpan={7} className="p-8 text-center text-muted-foreground">No dealers found.</td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="leads" className="space-y-4">
+          <AdminLeadTable leads={leads} onSelectLead={(l) => setSelectedLead(l)} onRefresh={fetchData} />
+        </TabsContent>
+
+        {/* ─── Platform Settings Tab ─── */}
+        <TabsContent value="settings" className="space-y-6">
+          <div className="glass-card p-6 space-y-5">
+            <div className="flex items-center gap-2 mb-1">
+              <Settings2 className="h-4 w-4 text-primary" />
+              <h2 className="text-sm font-semibold text-foreground">Platform Configuration</h2>
+            </div>
+            <p className="text-xs text-muted-foreground">
+              These settings control global platform behavior, branding, and pricing.
+            </p>
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {[
+                { key: "theme_website_name", label: "Website Name", placeholder: "MayaX" },
+                { key: "theme_logo_url", label: "Logo URL", placeholder: "https://..." },
+                { key: "lead_base_price", label: "Base Lead Price ($)", placeholder: "25.00" },
+                { key: "tier_vip_delay_hours", label: "VIP Delay (hours)", placeholder: "0" },
+                { key: "tier_elite_delay_hours", label: "Elite Delay (hours)", placeholder: "6" },
+                { key: "tier_pro_delay_hours", label: "Pro Delay (hours)", placeholder: "12" },
+                { key: "tier_basic_delay_hours", label: "Basic Delay (hours)", placeholder: "24" },
+                { key: "support_email", label: "Support Email", placeholder: "support@mayax.com" },
+              ].map(({ key, label, placeholder }) => (
+                <div key={key} className="space-y-2">
+                  <Label className="text-xs text-muted-foreground">{label}</Label>
+                  <Input
+                    value={settingsForm[key] ?? ""}
+                    onChange={(e) => setSettingsForm((prev) => ({ ...prev, [key]: e.target.value }))}
+                    placeholder={placeholder}
+                    className="bg-card border-border"
+                  />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div className="flex justify-end">
+            <Button onClick={savePlatformSettings} disabled={savingSettings} className="gradient-blue-cyan text-foreground gap-2">
+              <Save className="h-4 w-4" />
+              {savingSettings ? "Saving…" : "Save Settings"}
+            </Button>
+          </div>
+        </TabsContent>
+
+        {/* ─── Plans Tab ─── */}
+        <TabsContent value="plans" className="space-y-4">
+          <AdminPlanManager />
+        </TabsContent>
+
+        {/* ─── Payments Tab ─── */}
+        <TabsContent value="payments" className="space-y-4">
+          <AdminPaymentManager />
+          <AdminStripeSessions />
+        </TabsContent>
+
+        {/* ─── Branding Tab ─── */}
+        <TabsContent value="branding" className="space-y-4">
+          <AdminBrandingSettings
+            settingsForm={settingsForm}
+            setSettingsForm={setSettingsForm}
+            platformSettings={platformSettings}
+            onSave={savePlatformSettings}
+            saving={savingSettings}
+          />
+        </TabsContent>
+
+        {/* ─── User Management Tab ─── */}
+        <TabsContent value="users" className="space-y-4">
+          <AdminUserManager />
+        </TabsContent>
+
+        {/* ─── Promo Codes Tab ─── */}
+        <TabsContent value="promos" className="space-y-4">
+          <AdminPromoCodeManager />
+          <AdminPromoUsageHistory />
+        </TabsContent>
+
+        {/* ─── Webhooks Tab ─── */}
+        <TabsContent value="webhooks" className="space-y-4">
+          <AdminWebhookSettings
+            settingsForm={settingsForm}
+            setSettingsForm={setSettingsForm}
+            platformSettings={platformSettings}
+            onSave={savePlatformSettings}
+            saving={savingSettings}
+          />
+        </TabsContent>
+
+        {/* ─── Lead Pricing Tab ─── */}
+        <TabsContent value="lead-pricing" className="space-y-4">
+          <AdminLeadPricingSettings
+            platformSettings={platformSettings}
+            onSaved={fetchData}
+          />
+        </TabsContent>
+        {/* ─── Grade & AI Score Tab ─── */}
+        <TabsContent value="grading" className="space-y-4">
+          <AdminGradeSettings
+            platformSettings={platformSettings}
+            onSaved={fetchData}
+          />
+        </TabsContent>
+        {/* ─── Lead Requests Tab ─── */}
+        <TabsContent value="lead-requests" className="space-y-4">
+          <AdminLeadRequests />
+        </TabsContent>
+        {/* ─── Email Setup Tab ─── */}
+        <TabsContent value="email-setup" className="space-y-4">
+          <AdminEmailSetup />
+        </TabsContent>
+        {/* ─── Find Duplicates Tab ─── */}
+        <TabsContent value="duplicates" className="space-y-4">
+          <AdminFindDuplicates />
+        </TabsContent>
+        {/* ─── Knowledge Base Tab ─── */}
+        <TabsContent value="knowledge-base" className="space-y-4">
+          <AdminKnowledgeBase />
+        </TabsContent>
+      </Tabs>
+
+      {/* ─── Dealer Detail Dialog ─── */}
+      <Dialog open={!!selectedDealer} onOpenChange={() => setSelectedDealer(null)}>
+        <DialogContent className="bg-card border-border max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">{selectedDealer?.dealership_name}</DialogTitle>
+          </DialogHeader>
+          {selectedDealer && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground text-xs">Contact</span><p className="text-foreground">{selectedDealer.contact_person}</p></div>
+                <div><span className="text-muted-foreground text-xs">Email</span><p className="text-foreground">{selectedDealer.email}</p></div>
+                <div><span className="text-muted-foreground text-xs">Phone</span><p className="text-foreground">{selectedDealer.phone ?? "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Province</span><p className="text-foreground">{selectedDealer.province ?? "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Tier</span><p className="text-foreground capitalize">{selectedDealer.subscription_tier}</p></div>
+                <div><span className="text-muted-foreground text-xs">Balance</span><p className="text-foreground">${Number(selectedDealer.wallet_balance).toFixed(2)}</p></div>
+                <div><span className="text-muted-foreground text-xs">Joined</span><p className="text-foreground">{new Date(selectedDealer.created_at).toLocaleDateString()}</p></div>
+                <div><span className="text-muted-foreground text-xs">Status</span>
+                  <Badge className={cn("gap-1 border-0 text-[10px] mt-1", (statusConfig[selectedDealer.approval_status] ?? statusConfig.pending).color)}>
+                    {selectedDealer.approval_status}
+                  </Badge>
+                </div>
+              </div>
+              <div className="border-t border-border pt-4">
+                <Label className="text-xs text-muted-foreground mb-2 block">Update Status</Label>
+                <div className="flex flex-wrap gap-2">
+                  {["approved", "pending", "rejected", "suspended"].map((s) => (
+                    <Button
+                      key={s}
+                      size="sm"
+                      variant={selectedDealer.approval_status === s ? "default" : "outline"}
+                      className="capitalize text-xs"
+                      onClick={() => updateDealerStatus(selectedDealer.id, s)}
+                      disabled={selectedDealer.approval_status === s}
+                    >
+                      {s}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Edit Dealer Dialog ─── */}
+      <Dialog open={editingDealer} onOpenChange={() => { setEditingDealer(false); setSelectedDealer(null); }}>
+        <DialogContent className="bg-card border-border max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Edit Dealer</DialogTitle>
+          </DialogHeader>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Dealership Name</Label>
+              <Input value={dealerEditForm.dealership_name} onChange={(e) => setDealerEditForm(f => ({ ...f, dealership_name: e.target.value }))} className="bg-background border-border" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Contact Person</Label>
+              <Input value={dealerEditForm.contact_person} onChange={(e) => setDealerEditForm(f => ({ ...f, contact_person: e.target.value }))} className="bg-background border-border" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Email</Label>
+              <Input value={dealerEditForm.email} onChange={(e) => setDealerEditForm(f => ({ ...f, email: e.target.value }))} className="bg-background border-border" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Phone</Label>
+              <Input value={dealerEditForm.phone} onChange={(e) => setDealerEditForm(f => ({ ...f, phone: e.target.value }))} className="bg-background border-border" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Province</Label>
+              <Input value={dealerEditForm.province} onChange={(e) => setDealerEditForm(f => ({ ...f, province: e.target.value }))} className="bg-background border-border" />
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Status</Label>
+              <Select value={dealerEditForm.approval_status} onValueChange={(v) => setDealerEditForm(f => ({ ...f, approval_status: v }))}>
+                <SelectTrigger className="bg-background border-border"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="approved">Approved</SelectItem>
+                  <SelectItem value="pending">Pending</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="suspended">Suspended</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5">
+              <Label className="text-xs text-muted-foreground">Tier</Label>
+              <Select value={dealerEditForm.subscription_tier} onValueChange={(v) => setDealerEditForm(f => ({ ...f, subscription_tier: v }))}>
+                <SelectTrigger className="bg-background border-border"><SelectValue /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="basic">Basic</SelectItem>
+                  <SelectItem value="pro">Pro</SelectItem>
+                  <SelectItem value="elite">Elite</SelectItem>
+                  <SelectItem value="vip">VIP</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="space-y-1.5 col-span-2">
+              <Label className="text-xs text-muted-foreground">Wallet Balance ($)</Label>
+              <Input
+                type="number"
+                min={0}
+                step="0.01"
+                value={dealerEditForm.wallet_balance}
+                onChange={(e) => setDealerEditForm(f => ({ ...f, wallet_balance: e.target.value }))}
+                className="bg-background border-border font-mono"
+                placeholder="0.00"
+              />
+              <p className="text-[10px] text-muted-foreground">
+                Current: ${Number(selectedDealer?.wallet_balance ?? 0).toFixed(2)} — change is logged as an adjustment transaction.
+              </p>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setEditingDealer(false); setSelectedDealer(null); }}>Cancel</Button>
+            <Button onClick={saveEditDealer} disabled={savingDealer}>{savingDealer ? "Saving..." : "Save Changes"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* ─── Delete Dealer Confirmation ─── */}
+      <Dialog open={deletingDealer} onOpenChange={() => { setDeletingDealer(false); setSelectedDealer(null); }}>
+        <DialogContent className="bg-card border-border max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="text-foreground">Delete Dealer</DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-muted-foreground">
+            Are you sure you want to delete <strong className="text-foreground">{selectedDealer?.dealership_name}</strong>? This action cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => { setDeletingDealer(false); setSelectedDealer(null); }}>Cancel</Button>
+            <Button variant="destructive" onClick={confirmDeleteDealer} disabled={savingDealer}>{savingDealer ? "Deleting..." : "Delete"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+
+      <Dialog open={!!selectedLead} onOpenChange={() => { setSelectedLead(null); setConfirmDelete(false); setEditingLead(false); }}>
+        <DialogContent className="bg-card border-border max-w-lg max-h-[85vh] overflow-y-auto">
+          <DialogHeader>
+            <div className="flex items-center justify-between">
+              <DialogTitle className="text-foreground font-mono">{selectedLead?.reference_code}</DialogTitle>
+              {selectedLead && !editingLead && (
+                <Button variant="outline" size="sm" className="gap-1.5" onClick={() => {
+                  setEditForm({
+                    first_name: selectedLead.first_name,
+                    last_name: selectedLead.last_name,
+                    email: selectedLead.email ?? "",
+                    phone: selectedLead.phone ?? "",
+                    city: selectedLead.city ?? "",
+                    province: selectedLead.province ?? "",
+                    quality_grade: selectedLead.quality_grade ?? "B",
+                    ai_score: String(selectedLead.ai_score ?? ""),
+                    price: String(selectedLead.price),
+                    sold_status: selectedLead.sold_status,
+                    buyer_type: selectedLead.buyer_type ?? "online",
+                    vehicle_preference: selectedLead.vehicle_preference ?? "",
+                    vehicle_price: selectedLead.vehicle_price != null ? String(selectedLead.vehicle_price) : "",
+                    vehicle_mileage: selectedLead.vehicle_mileage != null ? String(selectedLead.vehicle_mileage) : "",
+                    income: selectedLead.income != null ? String(selectedLead.income) : "",
+                    credit_range_min: selectedLead.credit_range_min != null ? String(selectedLead.credit_range_min) : "",
+                    credit_range_max: selectedLead.credit_range_max != null ? String(selectedLead.credit_range_max) : "",
+                    notes: selectedLead.notes ?? "",
+                    appointment_time: selectedLead.appointment_time ? selectedLead.appointment_time.slice(0, 16) : "",
+                    trade_in: selectedLead.trade_in ?? false,
+                    has_bankruptcy: selectedLead.has_bankruptcy ?? false,
+                    trade_in_vehicle: (selectedLead as any).trade_in_vehicle ?? "",
+                  });
+                  setEditingLead(true);
+                }}>
+                  <Pencil className="h-3.5 w-3.5" /> Edit
+                </Button>
+              )}
+            </div>
+          </DialogHeader>
+          {selectedLead && !editingLead && (
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3 text-sm">
+                <div><span className="text-muted-foreground text-xs">Name</span><p className="text-foreground">{selectedLead.first_name} {selectedLead.last_name}</p></div>
+                <div><span className="text-muted-foreground text-xs">Email</span><p className="text-foreground">{selectedLead.email ?? "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Phone</span><p className="text-foreground">{selectedLead.phone ?? "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">City</span><p className="text-foreground">{selectedLead.city ?? "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Province</span><p className="text-foreground">{selectedLead.province ?? "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Grade</span>
+                  <Badge className={cn("border-0 text-[10px] mt-1", gradeColors[selectedLead.quality_grade ?? ""] ?? "bg-muted text-muted-foreground")}>
+                    {selectedLead.quality_grade ?? "—"}
+                  </Badge>
+                </div>
+                <div><span className="text-muted-foreground text-xs">AI Score</span><p className="text-foreground">{selectedLead.ai_score ?? "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Price</span><p className="text-foreground font-mono">${Number(selectedLead.price).toFixed(2)}</p></div>
+                <div><span className="text-muted-foreground text-xs">Status</span><p className="text-foreground capitalize">{selectedLead.sold_status}</p></div>
+                <div><span className="text-muted-foreground text-xs">Buyer Type</span><p className="text-foreground capitalize">{selectedLead.buyer_type ?? "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Income</span><p className="text-foreground">{selectedLead.income != null ? `$${Number(selectedLead.income).toLocaleString()}` : "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Credit Range</span><p className="text-foreground">{selectedLead.credit_range_min || selectedLead.credit_range_max ? `${Number(selectedLead.credit_range_min ?? 0).toLocaleString()} – ${Number(selectedLead.credit_range_max ?? 0).toLocaleString()}` : "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Vehicle Preference</span><p className="text-foreground">{selectedLead.vehicle_preference ?? "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Vehicle Price</span><p className="text-foreground">{selectedLead.vehicle_price != null ? `$${Number(selectedLead.vehicle_price).toLocaleString()}` : "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Vehicle Mileage</span><p className="text-foreground">{selectedLead.vehicle_mileage != null ? `${Number(selectedLead.vehicle_mileage).toLocaleString()} km` : "—"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Trade-In</span><p className="text-foreground">{selectedLead.trade_in ? "Yes" : "No"}</p></div>
+                {selectedLead.trade_in && (selectedLead as any).trade_in_vehicle && (
+                  <div><span className="text-muted-foreground text-xs">Trade-In Vehicle</span><p className="text-foreground">{(selectedLead as any).trade_in_vehicle}</p></div>
+                )}
+                <div><span className="text-muted-foreground text-xs">Bankruptcy</span><p className="text-foreground">{selectedLead.has_bankruptcy ? "Yes" : "No"}</p></div>
+                <div><span className="text-muted-foreground text-xs">Appointment</span><p className="text-foreground">{selectedLead.appointment_time ? new Date(selectedLead.appointment_time).toLocaleString() : "—"}</p></div>
+                <div className="col-span-2"><span className="text-muted-foreground text-xs">Created</span><p className="text-foreground">{new Date(selectedLead.created_at).toLocaleString()}</p></div>
+                <div className="col-span-2">
+                  <span className="text-muted-foreground text-xs">Notes</span>
+                  {selectedLead.notes && selectedLead.notes.trim() ? (
+                    <p className="text-foreground text-xs whitespace-pre-wrap mt-1 p-2 rounded-md bg-muted/30 border border-border/50">{selectedLead.notes}</p>
+                  ) : (
+                    <p className="text-muted-foreground text-xs italic mt-1">No notes — click Edit to add internal notes for this lead.</p>
+                  )}
+                </div>
+              </div>
+              <div className="border-t border-border pt-4">
+                <LeadFileUploader
+                  leadId={selectedLead.id}
+                  files={selectedLead.document_files ?? []}
+                  onFilesChange={(files) => {
+                    setSelectedLead({ ...selectedLead, document_files: files });
+                    setLeads((prev) => prev.map((l) => l.id === selectedLead.id ? { ...l, document_files: files } : l));
+                  }}
+                />
+              </div>
+              <div className="border-t border-border pt-4">
+                {!confirmDelete ? (
+                  <Button variant="outline" size="sm" className="gap-2 text-destructive border-destructive/30 hover:bg-destructive/10" onClick={() => setConfirmDelete(true)}>
+                    <Trash2 className="h-4 w-4" /> Delete Lead
+                  </Button>
+                ) : (
+                  <div className="flex items-center gap-3">
+                    <p className="text-sm text-destructive">Are you sure?</p>
+                    <Button variant="destructive" size="sm" disabled={deletingLead} onClick={() => deleteLead(selectedLead.id)}>
+                      {deletingLead ? "Deleting…" : "Yes, Delete"}
+                    </Button>
+                    <Button variant="outline" size="sm" onClick={() => setConfirmDelete(false)}>Cancel</Button>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          {selectedLead && editingLead && (
+            <div className="space-y-4">
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide">Personal Information</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">First Name</Label>
+                  <Input value={editForm.first_name} onChange={(e) => setEditForm((f) => ({ ...f, first_name: e.target.value }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Last Name</Label>
+                  <Input value={editForm.last_name} onChange={(e) => setEditForm((f) => ({ ...f, last_name: e.target.value }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Email</Label>
+                  <Input value={editForm.email} onChange={(e) => setEditForm((f) => ({ ...f, email: e.target.value }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Phone</Label>
+                  <Input value={editForm.phone} onChange={(e) => setEditForm((f) => ({ ...f, phone: e.target.value }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">City</Label>
+                  <Input value={editForm.city} onChange={(e) => setEditForm((f) => ({ ...f, city: e.target.value }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Province</Label>
+                  <Input value={editForm.province} onChange={(e) => setEditForm((f) => ({ ...f, province: e.target.value }))} className="bg-background border-border" />
+                </div>
+              </div>
+
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Financial</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Income ($)</Label>
+                  <Input type="text" inputMode="numeric" placeholder="e.g. 12,345" value={editForm.income} onChange={(e) => setEditForm((f) => ({ ...f, income: formatAmount(e.target.value) }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Credit Min</Label>
+                  <Input type="number" min={300} max={900} value={editForm.credit_range_min} onChange={(e) => setEditForm((f) => ({ ...f, credit_range_min: e.target.value }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Credit Max</Label>
+                  <Input type="number" min={300} max={900} value={editForm.credit_range_max} onChange={(e) => setEditForm((f) => ({ ...f, credit_range_max: e.target.value }))} className="bg-background border-border" />
+                </div>
+              </div>
+
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Vehicle</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Vehicle Preference</Label>
+                  <Input value={editForm.vehicle_preference} onChange={(e) => setEditForm((f) => ({ ...f, vehicle_preference: e.target.value }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Vehicle Price ($)</Label>
+                  <Input type="text" inputMode="numeric" placeholder="e.g. 25,000" value={editForm.vehicle_price} onChange={(e) => setEditForm((f) => ({ ...f, vehicle_price: formatAmount(e.target.value) }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Vehicle Mileage (km)</Label>
+                  <Input type="text" inputMode="numeric" placeholder="e.g. 50,000" value={editForm.vehicle_mileage} onChange={(e) => setEditForm((f) => ({ ...f, vehicle_mileage: formatAmount(e.target.value) }))} className="bg-background border-border" />
+                </div>
+              </div>
+
+              <p className="text-xs font-semibold text-muted-foreground uppercase tracking-wide pt-2">Lead Details</p>
+              <div className="grid grid-cols-2 gap-3">
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Buyer Type</Label>
+                  <Select value={editForm.buyer_type} onValueChange={(v) => setEditForm((f) => ({ ...f, buyer_type: v }))}>
+                    <SelectTrigger className="bg-background border-border"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="online">Online</SelectItem>
+                      <SelectItem value="walk-in">Walk-in</SelectItem>
+                      <SelectItem value="referral">Referral</SelectItem>
+                      <SelectItem value="phone">Phone</SelectItem>
+                      <SelectItem value="trade">Trade-in</SelectItem>
+                      <SelectItem value="refinance">Refinance</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Appointment Time</Label>
+                  <Input type="datetime-local" value={editForm.appointment_time} onChange={(e) => setEditForm((f) => ({ ...f, appointment_time: e.target.value }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Quality Grade</Label>
+                  <Select value={editForm.quality_grade} onValueChange={(v) => setEditForm((f) => ({ ...f, quality_grade: v }))}>
+                    <SelectTrigger className="bg-background border-border"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {["A+", "A", "B", "C"].map((g) => <SelectItem key={g} value={g}>{g}</SelectItem>)}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">AI Score</Label>
+                  <Input type="number" min={0} max={100} value={editForm.ai_score} onChange={(e) => setEditForm((f) => ({ ...f, ai_score: e.target.value }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Price ($)</Label>
+                  <Input type="text" inputMode="numeric" placeholder="e.g. 1,500" value={editForm.price} onChange={(e) => setEditForm((f) => ({ ...f, price: formatAmount(e.target.value) }))} className="bg-background border-border" />
+                </div>
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Status</Label>
+                  <Select value={editForm.sold_status} onValueChange={(v) => setEditForm((f) => ({ ...f, sold_status: v }))}>
+                    <SelectTrigger className="bg-background border-border"><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="available">Available</SelectItem>
+                      <SelectItem value="sold">Sold</SelectItem>
+                    </SelectContent>
+                  </Select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={editForm.trade_in} onCheckedChange={(v) => setEditForm((f) => ({ ...f, trade_in: !!v }))} className="border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                  <Label className="text-xs text-muted-foreground">Trade-In</Label>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Checkbox checked={editForm.has_bankruptcy} onCheckedChange={(v) => setEditForm((f) => ({ ...f, has_bankruptcy: !!v }))} className="border-muted-foreground data-[state=checked]:bg-primary data-[state=checked]:border-primary" />
+                  <Label className="text-xs text-muted-foreground">Bankruptcy</Label>
+                </div>
+              </div>
+              {editForm.trade_in && (
+                <div className="space-y-1.5">
+                  <Label className="text-xs text-muted-foreground">Trade-In Vehicle</Label>
+                  <input
+                    value={editForm.trade_in_vehicle}
+                    onChange={(e) => setEditForm((f) => ({ ...f, trade_in_vehicle: e.target.value }))}
+                    placeholder="e.g. 2018 Honda Civic, 80,000 km"
+                    maxLength={200}
+                    className="flex h-9 w-full rounded-md border border-input bg-background px-3 py-1 text-sm"
+                  />
+                </div>
+              )}
+
+              <div className="space-y-1.5">
+                <Label className="text-xs text-muted-foreground">Notes</Label>
+                <textarea
+                  value={editForm.notes}
+                  onChange={(e) => setEditForm((f) => ({ ...f, notes: e.target.value }))}
+                  className="flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 min-h-[60px]"
+                />
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2 border-t border-border">
+                <Button variant="outline" size="sm" onClick={() => setEditingLead(false)}>Cancel</Button>
+                <Button size="sm" disabled={savingLead} className="gradient-blue-cyan text-foreground" onClick={saveLeadEdits}>
+                  {savingLead ? "Saving…" : "Save Changes"}
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+    </div>
+  );
+};
+
+export default AdminDashboard;
