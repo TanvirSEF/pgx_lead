@@ -1,4 +1,4 @@
-# Stage 1: Build the React application
+# Stage 1: Build the React application & Bridge microservice
 FROM node:20-alpine AS build
 
 WORKDIR /app
@@ -12,21 +12,42 @@ ENV VITE_SUPABASE_URL=$VITE_SUPABASE_URL
 ENV VITE_SUPABASE_PUBLISHABLE_KEY=$VITE_SUPABASE_PUBLISHABLE_KEY
 ENV VITE_SUPABASE_PROJECT_ID=$VITE_SUPABASE_PROJECT_ID
 
+# Build frontend
 COPY package.json package-lock.json ./
 RUN npm ci
 
 COPY . .
 RUN npm run build
 
-# Stage 2: Serve with Nginx
-FROM nginx:alpine
+# Build bridge-service
+WORKDIR /app/bridge-service
+RUN npm ci
+RUN npm run build
 
-# Copy custom Nginx configuration for React SPA routing
+# Stage 2: Serve React frontend with Nginx & run Bridge service with Node.js
+FROM node:20-alpine
+
+# Install Nginx
+RUN apk add --no-cache nginx
+
+# Copy custom Nginx configuration
+RUN mkdir -p /etc/nginx/http.d /etc/nginx/conf.d
+COPY nginx.conf /etc/nginx/http.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
-# Copy built static assets
+# Copy built static frontend assets to Nginx html directory
 COPY --from=build /app/dist /usr/share/nginx/html
 
-EXPOSE 80
+# Copy built bridge-service
+WORKDIR /app/bridge-service
+COPY --from=build /app/bridge-service/package.json /app/bridge-service/package-lock.json ./
+COPY --from=build /app/bridge-service/node_modules ./node_modules
+COPY --from=build /app/bridge-service/dist ./dist
 
-CMD ["nginx", "-g", "daemon off;"]
+# Copy startup script to start both services
+COPY start.sh /start.sh
+RUN chmod +x /start.sh
+
+EXPOSE 80 4002
+
+CMD ["/start.sh"]
