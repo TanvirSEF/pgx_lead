@@ -25,14 +25,12 @@ RUN npm ci
 RUN npm run build
 
 # Stage 2: Serve React frontend with Nginx & run Bridge service with Node.js
-FROM node:20-alpine
+FROM nginx:alpine
 
-# Install Nginx
-RUN apk add --no-cache nginx
+# Install Node.js to run the bridge microservice
+RUN apk add --no-cache nodejs
 
 # Copy custom Nginx configuration
-RUN mkdir -p /etc/nginx/http.d /etc/nginx/conf.d
-COPY nginx.conf /etc/nginx/http.d/default.conf
 COPY nginx.conf /etc/nginx/conf.d/default.conf
 
 # Copy built static frontend assets to Nginx html directory
@@ -44,10 +42,10 @@ COPY --from=build /app/bridge-service/package.json /app/bridge-service/package-l
 COPY --from=build /app/bridge-service/node_modules ./node_modules
 COPY --from=build /app/bridge-service/dist ./dist
 
-# Copy startup script to start both services
+# Copy startup script
 COPY start.sh /start.sh
 RUN chmod +x /start.sh
 
 EXPOSE 80 4002
 
-CMD ["/start.sh"]
+CMD ["/bin/sh", "/start.sh"]
