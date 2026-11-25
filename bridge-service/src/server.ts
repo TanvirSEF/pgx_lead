@@ -1,6 +1,6 @@
 import express from 'express'
 import cors from 'cors'
-import { config } from './config.js'
+import { config, getConfiguredWebhookSecrets } from './config.js'
 import {
   initiateHandler,
   payRelayHandler,
@@ -43,7 +43,7 @@ app.get('/', (_req, res) => {
 const rawBodyParser = [
   express.raw({ type: '*/*' }),
   (req: express.Request, _res: express.Response, next: express.NextFunction) => {
-    if (Buffer.isBuffer(req.body) && !config.stripeWebhookSecret) {
+    if (Buffer.isBuffer(req.body) && !config.isProd && getConfiguredWebhookSecrets().length === 0) {
       try {
         req.body = JSON.parse(req.body.toString('utf-8'))
       } catch {

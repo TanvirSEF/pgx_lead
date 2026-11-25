@@ -1,23 +1,23 @@
 import type { Request, Response } from 'express'
-import { config } from './config.js'
+import { config, getConfiguredWebhookSecrets } from './config.js'
 import { bridgeService } from './bridge.service.js'
 import { openRedirectUrl } from './cloaking.js'
 import { getStripeClient } from './stripe.js'
 
 export async function initiateHandler(req: Request, res: Response): Promise<void> {
+  const configuredSecret = config.gatewayBridgeSecret.trim()
+  if (!configuredSecret) {
+    res.status(401).json({ error: 'Unauthorized: Gateway bridge secret is not configured on this server.' })
+    return
+  }
+
   const secretHeader =
     (req.headers['x-gateway-bridge-secret'] as string) ||
     (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
       ? req.headers.authorization.slice(7)
       : '')
 
-  const allowedSecrets = [
-    config.gatewayBridgeSecret.trim(),
-    'pgx-leads-super-secret-gateway-bridge-key-2026',
-    'pgx_bridge_leads_sec_prod_99',
-  ]
-
-  if (!secretHeader || !allowedSecrets.includes(secretHeader.trim())) {
+  if (!secretHeader || secretHeader.trim() !== configuredSecret) {
     res.status(401).json({ error: 'Unauthorized: Invalid or missing gateway bridge secret' })
     return
   }
@@ -177,16 +177,31 @@ export function returnHandler(req: Request, res: Response): void {
 
 export async function webhookHandler(req: Request, res: Response): Promise<void> {
   const stripe = getStripeClient()
-  const sig = req.headers['stripe-signature'] as string
+  const sig = req.headers['stripe-signature'] as string | undefined
+  const webhookSecrets = getConfiguredWebhookSecrets()
 
-  let event: any = req.body
+  let event: any = null
+  let lastError: Error | null = null
 
-  if (config.stripeWebhookSecret && sig) {
-    try {
-      event = stripe.webhooks.constructEvent(req.body, sig, config.stripeWebhookSecret)
-    } catch (err: any) {
-      console.error(`[PGX Leads Webhook] Signature verification failed: ${err.message}`)
-      res.status(400).send(`Webhook Error: ${err.message}`)
+  if (sig && webhookSecrets.length > 0) {
+    for (const secret of webhookSecrets) {
+      try {
+        event = stripe.webhooks.constructEvent(req.body, sig, secret)
+        if (event) break
+      } catch (err: any) {
+        lastError = err
+      }
+    }
+  }
+
+  if (!event) {
+    if (!config.isProd && webhookSecrets.length === 0 && !Buffer.isBuffer(req.body) && req.body?.type) {
+      console.warn('[PGX Leads Webhook] Non-production mode with no webhook secret configured; accepting parsed JSON body.')
+      event = req.body
+    } else {
+      const msg = lastError?.message || (webhookSecrets.length === 0 ? 'Stripe webhook secret not configured' : 'Missing or invalid stripe-signature')
+      console.error(`[PGX Leads Webhook] Signature verification failed: ${msg}`)
+      res.status(400).send(`Webhook Error: ${msg}`)
       return
     }
   }

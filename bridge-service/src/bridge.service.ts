@@ -53,7 +53,8 @@ export class BridgeService {
    * Initiates a cloaked Stripe Checkout Session on Stripe Account #2 (pgxleads.shop)
    */
   async initiateCheckout(input: InitiateCheckoutInput): Promise<InitiateCheckoutResult> {
-    const stripe = getStripeClient()
+    const targetMode = input.mode === 'live' ? 'live' : input.mode === 'test' ? 'test' : undefined
+    const stripe = getStripeClient(targetMode)
 
     const unitAmountCents = Math.round(input.amount * 100)
     if (unitAmountCents < 50) {
