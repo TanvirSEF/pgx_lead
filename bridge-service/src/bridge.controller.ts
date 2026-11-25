@@ -200,8 +200,16 @@ export async function webhookHandler(req: Request, res: Response): Promise<void>
     }
   }
 
-  if (event.type === 'checkout.session.completed') {
+  if (event.type === 'checkout.session.completed' || event.type === 'checkout.session.async_payment_succeeded') {
     const session = event.data.object
+
+    // Delayed payment methods (e.g. SEPA, ACH) emit checkout.session.completed with payment_status='unpaid'
+    if (session.payment_status && session.payment_status !== 'paid' && session.payment_status !== 'no_payment_required') {
+      console.log(`[PGX Leads Webhook] Session ${session.id} has payment_status=${session.payment_status}; awaiting async settlement.`)
+      res.status(200).json({ received: true, pendingAsync: true })
+      return
+    }
+
     const metadata = session.metadata || {}
 
     const merchantRefId = metadata.cid
@@ -215,7 +223,7 @@ export async function webhookHandler(req: Request, res: Response): Promise<void>
 
       const resellerId = partnerCode === 'AR' ? 'ARXO' : 'admin_root'
 
-      await bridgeService.forwardSettlementToGateway({
+      const forwarded = await bridgeService.forwardSettlementToGateway({
         stripeSessionId: session.id,
         stripeEventId: event.id || session.id,
         merchantRefId,
@@ -233,6 +241,11 @@ export async function webhookHandler(req: Request, res: Response): Promise<void>
           source_bridge: 'pgxleads.shop',
         },
       })
+
+      if (!forwarded) {
+        res.status(502).json({ error: 'Failed to forward settlement to PGX Gateway' })
+        return
+      }
     }
   }
 

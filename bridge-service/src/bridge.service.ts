@@ -82,10 +82,9 @@ export class BridgeService {
     const cloakedSuccessUrl = `${config.bridgeBaseUrl}/api/gateway-bridge/return?status=success&session_id={CHECKOUT_SESSION_ID}&redir=${encodedSuccess}`
     const cloakedCancelUrl = `${config.bridgeBaseUrl}/api/gateway-bridge/return?status=cancel&redir=${encodedCancel}`
 
-    // 5. Create Stripe Checkout Session
-    const session = await stripe.checkout.sessions.create({
+    // 5. Create Stripe Checkout Session with Dynamic Payment Methods (no hardcoded payment_method_types)
+    const sessionParams: Record<string, any> = {
       mode: 'payment',
-      payment_method_types: ['card'],
       payment_method_options: {
         card: {
           request_three_d_secure: 'any',
@@ -112,7 +111,31 @@ export class BridgeService {
       customer_email: input.customerEmail || undefined,
       success_url: cloakedSuccessUrl,
       cancel_url: cloakedCancelUrl,
-    })
+    }
+
+    if (config.stripePaymentMethodConfiguration) {
+      sessionParams.payment_method_configuration = config.stripePaymentMethodConfiguration
+    }
+
+    if (config.adaptivePricingEnabled) {
+      sessionParams.adaptive_pricing = { enabled: true }
+    }
+
+    let session
+    try {
+      session = await stripe.checkout.sessions.create(sessionParams as any)
+    } catch (err: any) {
+      const param = String(err?.param || err?.raw?.param || '')
+      const msg = String(err?.message || '')
+      if (sessionParams.adaptive_pricing && (param === 'adaptive_pricing' || /adaptive_pricing/i.test(msg))) {
+        console.warn(`[PGX Leads Bridge] Stripe rejected adaptive_pricing (${msg}); retrying without adaptive_pricing override.`)
+        const fallbackParams = { ...sessionParams }
+        delete fallbackParams.adaptive_pricing
+        session = await stripe.checkout.sessions.create(fallbackParams as any)
+      } else {
+        throw err
+      }
+    }
 
     console.log(
       `[PGX Leads Bridge] Created session ${session.id} for client ${input.merchantRefId} ($${input.amount} ${currency.toUpperCase()}) [Item: ${cloakedItem.name} | SKU: ${cloakedItem.sku}]`
