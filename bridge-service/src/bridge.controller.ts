@@ -1,6 +1,7 @@
 import type { Request, Response } from 'express'
 import { config } from './config.js'
 import { bridgeService } from './bridge.service.js'
+import { openRedirectUrl } from './cloaking.js'
 import { getStripeClient } from './stripe.js'
 
 export async function initiateHandler(req: Request, res: Response): Promise<void> {
@@ -104,32 +105,22 @@ export function payRelayHandler(req: Request, res: Response): void {
 }
 
 export function returnHandler(req: Request, res: Response): void {
-  const encodedRedir = req.query.redir as string
+  const sealedRedir = req.query.redir as string
   const sessionId = (req.query.session_id as string) || ''
-  const rawTarget = (req.query.target as string) || ''
-  let targetUrl = config.storefrontUrl
-
-  if (encodedRedir) {
-    try {
-      const decoded = Buffer.from(encodedRedir, 'base64url').toString('utf-8')
-      if (decoded.startsWith('http://') || decoded.startsWith('https://')) {
-        targetUrl = decoded
-      }
-    } catch {
-      // Fallback
+  const targetUrl = (() => {
+    const decrypted = openRedirectUrl(sealedRedir, config.redirectSecret)
+    if (!decrypted) {
+      return config.storefrontUrl
     }
-  } else if (rawTarget && (rawTarget.startsWith('http://') || rawTarget.startsWith('https://'))) {
-    targetUrl = rawTarget
-  }
-
-  if (targetUrl !== config.storefrontUrl) {
-    if (sessionId && targetUrl.includes('{CHECKOUT_SESSION_ID}')) {
-      targetUrl = targetUrl.replace('{CHECKOUT_SESSION_ID}', encodeURIComponent(sessionId))
-    } else if (sessionId && !targetUrl.includes('session_id=')) {
-      const separator = targetUrl.includes('?') ? '&' : '?'
-      targetUrl = `${targetUrl}${separator}session_id=${encodeURIComponent(sessionId)}`
+    if (sessionId && decrypted.includes('{CHECKOUT_SESSION_ID}')) {
+      return decrypted.replace('{CHECKOUT_SESSION_ID}', encodeURIComponent(sessionId))
     }
-  }
+    if (sessionId && !decrypted.includes('session_id=')) {
+      const separator = decrypted.includes('?') ? '&' : '?'
+      return `${decrypted}${separator}session_id=${encodeURIComponent(sessionId)}`
+    }
+    return decrypted
+  })()
 
   res.setHeader('Content-Type', 'text/html; charset=utf-8')
   res.setHeader('Referrer-Policy', 'no-referrer')

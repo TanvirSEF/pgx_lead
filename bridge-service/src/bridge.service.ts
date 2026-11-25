@@ -4,6 +4,7 @@ import {
   sanitizeOrderNumber,
   resolveCloakedLeadProduct,
   generateCloakedMetadata,
+  sealRedirectUrl,
   type CloakedProduct,
 } from './cloaking.js'
 
@@ -75,12 +76,12 @@ export class BridgeService {
       sku: cloakedItem.sku,
     })
 
-    // 4. Cloak return URLs to this bridge service domain
-    const encodedSuccess = input.successUrl ? Buffer.from(input.successUrl).toString('base64url') : ''
-    const encodedCancel = input.cancelUrl ? Buffer.from(input.cancelUrl).toString('base64url') : ''
+    // 4. Cloak return URLs to this bridge service domain using opaque AES-GCM tokens
+    const sealedSuccess = sealRedirectUrl(input.successUrl, config.redirectSecret)
+    const sealedCancel = sealRedirectUrl(input.cancelUrl, config.redirectSecret)
 
-    const cloakedSuccessUrl = `${config.bridgeBaseUrl}/api/gateway-bridge/return?status=success&session_id={CHECKOUT_SESSION_ID}&redir=${encodedSuccess}`
-    const cloakedCancelUrl = `${config.bridgeBaseUrl}/api/gateway-bridge/return?status=cancel&redir=${encodedCancel}`
+    const cloakedSuccessUrl = `${config.bridgeBaseUrl}/api/gateway-bridge/return?status=success&session_id={CHECKOUT_SESSION_ID}&redir=${sealedSuccess}`
+    const cloakedCancelUrl = `${config.bridgeBaseUrl}/api/gateway-bridge/return?status=cancel&redir=${sealedCancel}`
 
     // 5. Create Stripe Checkout Session with Dynamic Payment Methods (no hardcoded payment_method_types)
     const sessionParams: Record<string, any> = {

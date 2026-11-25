@@ -1,3 +1,5 @@
+import * as crypto from 'node:crypto'
+
 export interface CloakedProduct {
   name: string
   description: string
@@ -104,5 +106,69 @@ export function generateCloakedMetadata(params: {
     oid: params.oid,
     sku: params.sku,
     cart_id: `CR-${Date.now().toString(36).toUpperCase()}`,
+  }
+}
+
+const REDIRECT_ALG = 'aes-256-gcm'
+const REDIRECT_IV_LEN = 12
+const REDIRECT_TAG_LEN = 16
+
+function isSafeHttpUrl(candidate: string): boolean {
+  try {
+    const parsed = new URL(candidate)
+    return parsed.protocol === 'http:' || parsed.protocol === 'https:'
+  } catch {
+    return false
+  }
+}
+
+function deriveRedirectKey(secret: string): Buffer {
+  return crypto.createHash('sha256').update(secret).digest()
+}
+
+/**
+ * Seals a merchant return URL into an opaque, authenticated AES-256-GCM token
+ * so Stripe cannot decode the merchant domain from success_url / cancel_url.
+ */
+export function sealRedirectUrl(targetUrl: string | undefined, secret: string): string {
+  const trimmed = String(targetUrl || '').trim()
+  if (!trimmed || !secret || !isSafeHttpUrl(trimmed)) {
+    return ''
+  }
+
+  const iv = crypto.randomBytes(REDIRECT_IV_LEN)
+  const cipher = crypto.createCipheriv(REDIRECT_ALG, deriveRedirectKey(secret), iv)
+  const encrypted = Buffer.concat([cipher.update(trimmed, 'utf8'), cipher.final()])
+  const tag = cipher.getAuthTag()
+
+  return Buffer.concat([iv, tag, encrypted]).toString('base64url')
+}
+
+/**
+ * Verifies and decrypts an opaque redirect token produced by `sealRedirectUrl`.
+ */
+export function openRedirectUrl(token: string | undefined, secret: string): string | null {
+  const trimmed = String(token || '').trim()
+  if (!trimmed || !secret) {
+    return null
+  }
+
+  try {
+    const payload = Buffer.from(trimmed, 'base64url')
+    if (payload.length <= REDIRECT_IV_LEN + REDIRECT_TAG_LEN) {
+      return null
+    }
+
+    const iv = payload.subarray(0, REDIRECT_IV_LEN)
+    const tag = payload.subarray(REDIRECT_IV_LEN, REDIRECT_IV_LEN + REDIRECT_TAG_LEN)
+    const ciphertext = payload.subarray(REDIRECT_IV_LEN + REDIRECT_TAG_LEN)
+
+    const decipher = crypto.createDecipheriv(REDIRECT_ALG, deriveRedirectKey(secret), iv)
+    decipher.setAuthTag(tag)
+
+    const decrypted = Buffer.concat([decipher.update(ciphertext), decipher.final()]).toString('utf8')
+    return isSafeHttpUrl(decrypted) ? decrypted : null
+  } catch {
+    return null
   }
 }
