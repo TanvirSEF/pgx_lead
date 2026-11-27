@@ -5,6 +5,7 @@ import {
   initiateHandler,
   payRelayHandler,
   returnHandler,
+  sessionStatusHandler,
   webhookHandler,
 } from './bridge.controller.js'
 
@@ -64,6 +65,9 @@ app.use(express.json())
 // Bridge endpoints (Mounted under both /api/gateway-bridge and / for maximum reverse-proxy resilience)
 app.post('/api/gateway-bridge/initiate', initiateHandler)
 app.post('/initiate', initiateHandler)
+
+app.get('/api/gateway-bridge/session-status/:sessionId', sessionStatusHandler)
+app.get('/session-status/:sessionId', sessionStatusHandler)
 
 app.get('/api/gateway-bridge/pay', payRelayHandler)
 app.get('/pay', payRelayHandler)

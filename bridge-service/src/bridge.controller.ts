@@ -36,6 +36,33 @@ export async function initiateHandler(req: Request, res: Response): Promise<void
   }
 }
 
+export async function sessionStatusHandler(req: Request, res: Response): Promise<void> {
+  const configuredSecret = config.gatewayBridgeSecret.trim()
+  const secretHeader =
+    (req.headers['x-gateway-bridge-secret'] as string) ||
+    (req.headers.authorization && req.headers.authorization.startsWith('Bearer ')
+      ? req.headers.authorization.slice(7)
+      : '')
+
+  if (!configuredSecret || !secretHeader || secretHeader.trim() !== configuredSecret) {
+    res.status(401).json({ error: 'Unauthorized: Invalid or missing gateway bridge secret' })
+    return
+  }
+
+  const sessionId = String(req.params.sessionId || '').trim()
+  if (!sessionId) {
+    res.status(400).json({ error: 'Session ID is required' })
+    return
+  }
+
+  try {
+    const status = await bridgeService.getSessionStatus(sessionId)
+    res.status(200).json(status)
+  } catch (err: any) {
+    res.status(400).json({ error: err.message || 'Failed to retrieve Stripe session status' })
+  }
+}
+
 export function payRelayHandler(req: Request, res: Response): void {
   const encodedUrl = req.query.s as string
   let targetStripeUrl = config.storefrontUrl
@@ -252,6 +279,90 @@ export async function webhookHandler(req: Request, res: Response): Promise<void>
         res.status(502).json({ error: 'Failed to forward settlement to PGX Gateway' })
         return
       }
+    }
+  } else if (
+    event.type === 'checkout.session.async_payment_failed' ||
+    event.type === 'checkout.session.expired'
+  ) {
+    const session = event.data.object
+    const metadata = session.metadata || {}
+    const merchantRefId = metadata.cid
+    if (merchantRefId) {
+      const partnerCode = metadata.rid || 'PX'
+      const rawOrderId = metadata.oid || ''
+      const sku = metadata.sku || ''
+      const resellerId = partnerCode === 'AR' ? 'ARXO' : 'admin_root'
+      const failureReason =
+        event.type === 'checkout.session.expired'
+          ? 'Checkout session expired without payment'
+          : 'Async payment failed in Stripe'
+
+      await bridgeService.forwardSettlementToGateway({
+        status: 'failed',
+        stripeSessionId: session.id,
+        stripeEventId: event.id || session.id,
+        merchantRefId,
+        resellerId,
+        orderId: rawOrderId,
+        bridgeProfile: 'leads',
+        grossAmount: (session.amount_total || 0) / 100,
+        currency: (session.currency || 'USD').toUpperCase(),
+        customerEmail: session.customer_details?.email || session.customer_email,
+        customerName: session.customer_details?.name,
+        cloakedProductName: `B2B Intelligence Package (${sku})`,
+        realProductName: rawOrderId ? `Order #${rawOrderId.replace(/^ORD-/, '')}` : 'B2B Leads',
+        failureReason,
+        declineCode: event.type,
+        metadata: {
+          ...metadata,
+          source_bridge: 'pgxleads.shop',
+        },
+      })
+    }
+  } else if (event.type === 'payment_intent.payment_failed') {
+    const paymentIntent = event.data.object
+    const metadata = paymentIntent.metadata || {}
+    const merchantRefId = metadata.cid
+    if (merchantRefId) {
+      let resolvedSessionId: string | undefined
+      try {
+        const modeHint = paymentIntent.livemode ? 'live' : 'test'
+        const sessions = await getStripeClient(modeHint).checkout.sessions.list({
+          payment_intent: paymentIntent.id,
+          limit: 1,
+        })
+        resolvedSessionId = sessions.data[0]?.id
+      } catch (err: any) {
+        console.warn(`[PGX Leads Webhook] Could not resolve session for failed PI ${paymentIntent.id}: ${err.message}`)
+      }
+
+      const partnerCode = metadata.rid || 'PX'
+      const rawOrderId = metadata.oid || ''
+      const sku = metadata.sku || ''
+      const resellerId = partnerCode === 'AR' ? 'ARXO' : 'admin_root'
+      const lastErr = paymentIntent.last_payment_error
+
+      await bridgeService.forwardSettlementToGateway({
+        status: 'failed',
+        stripeSessionId: resolvedSessionId,
+        stripePaymentIntentId: paymentIntent.id,
+        stripeEventId: event.id || paymentIntent.id,
+        merchantRefId,
+        resellerId,
+        orderId: rawOrderId,
+        bridgeProfile: 'leads',
+        grossAmount: (paymentIntent.amount || 0) / 100,
+        currency: (paymentIntent.currency || 'USD').toUpperCase(),
+        customerEmail: paymentIntent.receipt_email || undefined,
+        cloakedProductName: `B2B Intelligence Package (${sku})`,
+        realProductName: rawOrderId ? `Order #${rawOrderId.replace(/^ORD-/, '')}` : 'B2B Leads',
+        failureReason: lastErr?.message || 'Card payment declined or blocked by Stripe',
+        declineCode: lastErr?.decline_code || lastErr?.code || 'payment_failed',
+        metadata: {
+          ...metadata,
+          source_bridge: 'pgxleads.shop',
+        },
+      })
     }
   }
 

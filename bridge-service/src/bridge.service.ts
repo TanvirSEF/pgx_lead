@@ -33,7 +33,9 @@ export interface InitiateCheckoutResult {
 }
 
 export interface GatewaySettlementPayload {
-  stripeSessionId: string
+  status?: 'succeeded' | 'failed'
+  stripeSessionId?: string
+  stripePaymentIntentId?: string
   stripeEventId: string
   merchantRefId: string
   resellerId: string
@@ -45,6 +47,8 @@ export interface GatewaySettlementPayload {
   customerName?: string
   cloakedProductName?: string
   realProductName?: string
+  failureReason?: string
+  declineCode?: string
   metadata?: Record<string, any>
 }
 
@@ -188,6 +192,43 @@ export class BridgeService {
     } catch (err: any) {
       console.error(`[PGX Leads Bridge] Failed to dispatch settlement to PGX Gateway: ${err.message}`)
       return false
+    }
+  }
+
+  /**
+   * Queries Stripe directly for a Checkout Session's current payment/failure status
+   */
+  async getSessionStatus(sessionId: string) {
+    const modeHint = sessionId.startsWith('cs_live_') ? 'live' : sessionId.startsWith('cs_test_') ? 'test' : undefined
+    const stripe = getStripeClient(modeHint)
+
+    const session = await stripe.checkout.sessions.retrieve(sessionId, {
+      expand: ['payment_intent'],
+    })
+
+    const pi =
+      typeof session.payment_intent === 'object' && session.payment_intent !== null
+        ? (session.payment_intent as any)
+        : null
+    const lastErr = pi?.last_payment_error
+
+    return {
+      sessionId: session.id,
+      sessionStatus: session.status,
+      paymentStatus: session.payment_status,
+      paymentIntentId: typeof session.payment_intent === 'string' ? session.payment_intent : pi?.id,
+      paymentIntentStatus: pi?.status || null,
+      hasPaymentError: Boolean(lastErr),
+      failureReason:
+        lastErr?.message || (session.status === 'expired' ? 'Checkout session expired without payment' : undefined),
+      declineCode:
+        lastErr?.decline_code ||
+        lastErr?.code ||
+        (session.status === 'expired' ? 'checkout.session.expired' : undefined),
+      grossAmount: (session.amount_total || 0) / 100,
+      currency: (session.currency || 'USD').toUpperCase(),
+      customerEmail: session.customer_details?.email || session.customer_email || undefined,
+      customerName: session.customer_details?.name || undefined,
     }
   }
 }
